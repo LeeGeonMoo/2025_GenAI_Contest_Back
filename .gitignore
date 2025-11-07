@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+env/
+.pytest_cache/
+pip-wheel-metadata/
+.DS_Store
+docker-data/

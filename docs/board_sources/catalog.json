@@ -1,0 +1,182 @@
+[
+  {
+    "id": "snuc_notice",
+    "college": "College of Engineering",
+    "department": "College Administration",
+    "url": "https://snuc.snu.ac.kr/%ea%b3%b5%ec%a7%80%ec%82%ac%ed%95%ad/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "notes": "WordPress category list",
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "cls_notice",
+    "college": "College of Liberal Studies",
+    "department": "CLS Office",
+    "url": "https://cls.snu.ac.kr/notice/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "sees_notice",
+    "college": "College of Engineering",
+    "department": "Naval Architecture & Ocean Engineering",
+    "url": "https://sees.snu.ac.kr/community/notice",
+    "template": "bootstrap_table",
+    "requires_auth": false
+  },
+  {
+    "id": "stat_notice",
+    "college": "College of Natural Sciences",
+    "department": "Statistics",
+    "url": "https://stat.snu.ac.kr/category/board-18-gn-969abdbt-20210204013659/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "cse_notice",
+    "college": "College of Engineering",
+    "department": "Computer Science & Engineering",
+    "url": "https://cse.snu.ac.kr/community/notice",
+    "template": "table_board",
+    "requires_auth": false
+  },
+  {
+    "id": "ece_admissions",
+    "college": "College of Engineering",
+    "department": "Electrical & Computer Engineering (Admissions)",
+    "url": "https://ece.snu.ac.kr/community/admissions",
+    "template": "table_board",
+    "requires_auth": false
+  },
+  {
+    "id": "ece_academics",
+    "college": "College of Engineering",
+    "department": "Electrical & Computer Engineering (Academics)",
+    "url": "https://ece.snu.ac.kr/community/academics",
+    "template": "table_board",
+    "requires_auth": false
+  },
+  {
+    "id": "nursing_notice",
+    "college": "College of Nursing",
+    "department": "Administration",
+    "url": "https://nursing.snu.ac.kr/board/notice",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "query", "param": "page", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "art_painting",
+    "college": "College of Fine Arts",
+    "department": "Western Painting",
+    "url": "https://art.snu.ac.kr/category/painting/?catemenu=Notice&type=major",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "learning_notice",
+    "college": "Center for Teaching & Learning",
+    "department": "Learning Support",
+    "url": "https://learning.snu.ac.kr/category/board-145-GN-5rT2jEg7-20230719130936/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "medicine_notice",
+    "college": "College of Medicine",
+    "department": "Administration",
+    "url": "https://medicine.snu.ac.kr/fnt/nac/selectNoticeList.do?bbsId=BBSMSTR_000000000001",
+    "template": "medicine_api",
+    "requires_auth": false
+  },
+  {
+    "id": "music_notice",
+    "college": "College of Music",
+    "department": "Administration",
+    "url": "https://music.snu.ac.kr/notice",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "gsds_notice",
+    "college": "Graduate School of Data Science",
+    "department": "Administration",
+    "url": "https://gsds.snu.ac.kr/news/announcement/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "gsep_notice",
+    "college": "Graduate School of Environmental Studies",
+    "department": "Announcements",
+    "url": "https://gsep.snu.ac.kr/boards/notice/news/notice/",
+    "template": "vue_board",
+    "requires_auth": false
+  },
+  {
+    "id": "gses_notice",
+    "college": "Graduate School of Environmental Studies",
+    "department": "Notices",
+    "url": "https://gses.snu.ac.kr/news/notice/notice?sc=y",
+    "template": "table_board",
+    "requires_auth": false
+  },
+  {
+    "id": "gspa_notice",
+    "college": "Graduate School of Public Administration",
+    "department": "Notices",
+    "url": "https://gspa.snu.ac.kr/kr/Board/List/Notice",
+    "template": "table_board",
+    "requires_auth": false
+  },
+  {
+    "id": "ist_notice",
+    "college": "Department of Mathematical Sciences",
+    "department": "Notices",
+    "url": "https://ist.snu.ac.kr/category/board-186-gn-tnqrnsi7-20230904142222/",
+    "template": "wordpress_board",
+    "requires_auth": false,
+    "options": {
+      "pagination": { "type": "path", "start": 1, "max_pages": 2 }
+    }
+  },
+  {
+    "id": "oia_notice",
+    "college": "Office of International Affairs",
+    "department": "Notices",
+    "url": "https://oia.snu.ac.kr/notice-all",
+    "template": "card_board",
+    "requires_auth": false
+  },
+  {
+    "id": "snu_general_notice",
+    "college": "University Headquarters",
+    "department": "Central Notices",
+    "url": "https://www.snu.ac.kr/snunow/notice/genernal",
+    "template": "drupal_board",
+    "requires_auth": false
+  }
+]
