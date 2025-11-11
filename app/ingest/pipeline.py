@@ -36,10 +36,13 @@ class IngestPipeline:
                 if exists:
                     skipped += 1
                     continue
-                summary = await self.llm_service.summarize(notice.body)
+                combined_text = f"{notice.title}\n\n{notice.body}"
+                summary = await self.llm_service.summarize(combined_text)
                 notice.summary = summary
+                classification = await self.llm_service.classify_category(combined_text)
+                notice.category = classification
 
-                embeds = await self.llm_service.embed(notice.body)
+                embeds = await self.llm_service.embed(combined_text)
 
                 post = Post(
                     title=notice.title,
