@@ -26,8 +26,8 @@ cp .env.example .env
 필수로 채워야 할 항목:
 ```ini
 # 요약/분류에 사용할 LLM (OpenAI 호환 또는 호환 API)
-LLM_SUMMARY_BASE=https://api.openai.com/v1
-LLM_SUMMARY_KEY=sk-...
+LLM_SUMMARY_BASE=https://factchat-cloud.mindlogic.ai/v1/api/openai
+LLM_SUMMARY_KEY=...
 LLM_SUMMARY_MODEL=gpt-5-chat-latest      # 원하는 모델명
 
 # 임베딩 (추후 필요 시; 지금은 비워도 됨)
