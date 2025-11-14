@@ -50,21 +50,7 @@ class Settings(BaseSettings):
     crawler_verify_ssl: bool = True
     board_catalog_enabled: bool = False
     llm_categories: List[str] = [
-        "장학",
-        "학사",
-        "채용",
-        "진로",
-        "연구",
-        "국제",
-        "행사",
-        "복지",
-        "시설",
-        "IT",
-        "안전",
-        "공모전",
-        "세미나",
-        "교육",
-        "봉사",
+        "대학생활", "장학", "연구", "채용", "대외활동", "기타"
     ]
 
     model_config = SettingsConfigDict(

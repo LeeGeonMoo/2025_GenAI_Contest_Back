@@ -12,14 +12,12 @@ reco_service = RecommendationService(feed_service)
 
 @router.get("", summary="Get baseline feed")
 async def get_feed(
-    department: str | None = Query(default=None),
-    grade: str | None = Query(default=None),
+    category: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ):
     return await feed_service.get_feed(
-        department=department,
-        grade=grade,
+        category=category,
         page=page,
         page_size=page_size,
     )

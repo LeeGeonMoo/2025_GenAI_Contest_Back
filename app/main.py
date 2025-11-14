@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
 from app.core.config import get_settings
@@ -14,7 +15,20 @@ def create_app() -> FastAPI:
         title=settings.project_name,
         version="0.1.0",
     )
-    application.include_router(router)
+
+    # CORS 설정
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:5173",  # Vite 개발 서버
+            "http://localhost:3000",  # React 개발 서버 (필요시)
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    application.include_router(router, prefix="/api")
 
     @application.on_event("startup")
     async def _startup() -> None:
