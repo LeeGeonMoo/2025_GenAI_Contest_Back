@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     llm_summary_max_tokens: int = 120
     llm_summary_timeout: float | None = None
 
+    llm_chat_base: str | None = None
+    llm_chat_key: str | None = None
+    llm_chat_endpoint: str = "/v1/chat/completions"
+    llm_chat_model: str = "gpt-4o-mini"
+    llm_chat_max_tokens: int = 600
+    llm_chat_timeout: float | None = None
+
     llm_embedding_base: str | None = None
     llm_embedding_key: str | None = None
     llm_embedding_endpoint: str = "/v1/embeddings"

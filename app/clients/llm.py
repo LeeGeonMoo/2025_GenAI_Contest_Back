@@ -24,6 +24,17 @@ class LLMClient:
         self.summary_max_tokens = settings.llm_summary_max_tokens
         self.summary_timeout = settings.llm_summary_timeout or settings.llm_api_timeout
 
+        self.chat_base = settings.llm_chat_base or self.summary_base or settings.llm_api_base
+        self.chat_key = settings.llm_chat_key or self.summary_key or settings.llm_api_key
+        self.chat_endpoint = settings.llm_chat_endpoint
+        self.chat_model = settings.llm_chat_model or self.summary_model
+        self.chat_max_tokens = settings.llm_chat_max_tokens
+        self.chat_timeout = (
+            settings.llm_chat_timeout
+            or self.summary_timeout
+            or settings.llm_api_timeout
+        )
+
         self.embedding_base = settings.llm_embedding_base or settings.llm_api_base
         self.embedding_key = settings.llm_embedding_key or settings.llm_api_key
         self.embedding_endpoint = settings.llm_embedding_endpoint
@@ -31,10 +42,13 @@ class LLMClient:
         self.embedding_timeout = settings.llm_embedding_timeout or settings.llm_api_timeout
 
         self.summary_enabled = bool(self.summary_base and self.summary_key)
+        self.chat_enabled = bool(self.chat_base and self.chat_key)
         self.embedding_enabled = bool(self.embedding_base and self.embedding_key)
 
         if not self.summary_enabled:
             logger.info("LLM summary client disabled (missing base URL or API key).")
+        if not self.chat_enabled:
+            logger.info("LLM chat client disabled (missing base URL or API key).")
         if not self.embedding_enabled:
             logger.info("LLM embedding client disabled (missing base URL or API key).")
 
@@ -117,6 +131,33 @@ class LLMClient:
             return response["choices"][0]["message"]["content"].strip()
         except (KeyError, IndexError) as exc:
             raise LLMRequestError("Invalid classification response payload") from exc
+
+    async def chat_completion(
+        self,
+        messages: List[dict],
+        max_tokens: Optional[int] = None,
+        temperature: float = 0.1,
+    ) -> str:
+        if not self.chat_enabled:
+            raise LLMDisabledError("LLM chat client not configured")
+
+        payload = {
+            "model": self.chat_model,
+            "messages": messages,
+            "max_tokens": max_tokens or self.chat_max_tokens,
+            "temperature": temperature,
+        }
+        response = await self._post(
+            base=self.chat_base,
+            api_key=self.chat_key,
+            endpoint=self.chat_endpoint,
+            timeout=self.chat_timeout,
+            payload=payload,
+        )
+        try:
+            return response["choices"][0]["message"]["content"].strip()
+        except (KeyError, IndexError) as exc:
+            raise LLMRequestError("Invalid chat response payload") from exc
 
     async def _post(
         self,
