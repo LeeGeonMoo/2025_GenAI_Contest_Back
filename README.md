@@ -40,6 +40,13 @@ QDRANT_VECTOR_SIZE=1536
 
 # 실제 게시판 크롤러를 아직 쓰지 않을 경우 false
 BOARD_CATALOG_ENABLED=false
+
+# RAG 챗봇 응답용 (요약 엔드포인트와 분리 가능)
+LLM_CHAT_BASE=https://api.openai.com/v1
+LLM_CHAT_KEY=sk-...
+LLM_CHAT_MODEL=gpt-4o-mini
+LLM_CHAT_MAX_TOKENS=600
+LLM_CHAT_TIMEOUT=20
 ```
 임베딩 키가 없으면 임베딩은 fallback 벡터를 사용합니다.
 
@@ -101,7 +108,13 @@ docker compose up -d --build
   - `GET /feed/reco-user`, `GET /feed/reco-likes`
   - `GET /posts/{id}`
   - `POST /likes`, `POST /reminders`
-  - `POST /chat` (RAG 챗봇, 기본 구조만 제공)
+  - `POST /chat` (공지 기반 RAG 챗봇, DB 범위를 벗어나면 거절)
+
+### `/chat` 흐름 요약
+- MongoDB 키워드 검색과 Qdrant 벡터 검색 결과를 가중 결합해 질문과 가장 연관된 공지 3~5건을 선별합니다.
+- 욕설·날씨 등 공지와 무관한 질문, 혹은 관련 공지를 찾지 못한 경우에는 이유를 명시한 친절한 거절 메시지를 돌려줍니다.
+- LLM이 생성한 1차 답변은 “질문 의도에 부합하는지”를 재검수하는 2차 LLM 패스로 한 번 더 필터링합니다.
+- LLM 호출이 불가능하면 수집된 공지를 `- 제목 (학과, 날짜) + 주요 내용` 형태로 요약해 최소한의 정보를 제공합니다.
 
 ---
 
