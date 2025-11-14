@@ -14,16 +14,13 @@ class FeedService:
 
     async def get_feed(
         self,
-        department: Optional[str],
-        grade: Optional[str],
+        category: Optional[str],
         page: int,
         page_size: int,
     ) -> Dict[str, Any]:
         filters: Dict[str, Any] = {}
-        if department:
-            filters["department"] = department
-        if grade:
-            filters["audience_grade"] = grade
+        if category:
+            filters["category"] = category
         exclude_sources = {
             None,
             "",
@@ -47,72 +44,35 @@ class FeedService:
             .to_list()
         )
 
-        scored = [self._score_post(post, department, grade) for post in posts]
+        items = [self._format_post_item(post) for post in posts]
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
 
         return {
-            "items": scored,
+            "items": items,
             "meta": {
                 "total": total,
                 "page": page,
                 "page_size": page_size,
-                "scoring_weights": {
-                    "department": 0.4,
-                    "grade": 0.2,
-                    "deadline": 0.2,
-                    "recency": 0.2,
-                },
+                "total_pages": total_pages,
             },
         }
 
     async def get_post(self, post_id: str | PydanticObjectId) -> Optional[Post]:
         return await Post.get(post_id)
 
-    def _score_post(
-        self,
-        post: Post,
-        department: Optional[str],
-        grade: Optional[str],
-    ) -> Dict[str, Any]:
-        weight_department = 0.4
-        weight_grade = 0.2
-        weight_deadline = 0.2
-        weight_recency = 0.2
-
-        dept_match = 1.0 if department and post.department == department else 0.5
-        grade_match = (
-            1.0 if grade and post.audience_grade and grade in post.audience_grade else 0.5
-        )
-        deadline_boost = self._deadline_boost(post)
-        recency_boost = self._recency_boost(post)
-
-        score = (
-            weight_department * dept_match
-            + weight_grade * grade_match
-            + weight_deadline * deadline_boost
-            + weight_recency * recency_boost
-        )
+    def _format_post_item(self, post: Post) -> Dict[str, Any]:
+        """Post 모델을 API 응답 형식으로 변환"""
+        # source를 객체 배열로 변환
+        source_list = []
+        if post.source:
+            source_list.append({"name": post.source, "url": None})
 
         return {
-            **post.model_dump(),
-            "score": score,
-            "rank_reason": {
-                "dept_match": dept_match,
-                "grade_match": grade_match,
-                "deadline_boost": deadline_boost,
-                "recency_boost": recency_boost,
-            },
+            "id": str(post.id),
+            "title": post.title,
+            "tags": post.tags,
+            "category": post.category or "",
+            "source": source_list,
+            "posted_at": post.posted_at.isoformat() if post.posted_at else None,
+            "deadline": post.deadline_at.isoformat() if post.deadline_at else None,
         }
-
-    def _deadline_boost(self, post: Post) -> float:
-        if not post.deadline_at:
-            return 0.5
-        delta = (post.deadline_at - post.posted_at).total_seconds() / 3600
-        if delta <= 0:
-            return 0.0
-        return min(1.0, 1 / (delta / 24))
-
-    def _recency_boost(self, post: Post) -> float:
-        hours_since_post = (post.created_at - post.posted_at).total_seconds() / 3600
-        if hours_since_post <= 0:
-            return 1.0
-        return max(0.1, 1 / (1 + hours_since_post / 24))
