@@ -1,7 +1,7 @@
 # 지능형 공지 플랫폼 - 백엔드 아키텍처 (KOR)
 
 ## 1) 현재 범위
-- `/api/*` 엔드포인트로 피드/검색/채팅/좋아요/리마인더를 제공하는 FastAPI 백엔드.
+- `/api/*` 엔드포인트로 피드/검색/채팅/좋아요/리마인더/사용자 프로필을 제공하는 FastAPI 백엔드.
 - MongoDB(Beanie)와 Qdrant를 사용하며, Qdrant 컬렉션은 최초 사용 시 자동 생성.
 - LLM 요약/분류/임베딩/채팅 키가 없으면 결정론적 요약·임베딩으로 폴백하여 기능을 유지.
 - 더미/로컬 데이터 + 샘플 HTML 크롤링으로 개발 환경 ingest를 실행하며, 필요 시 APScheduler로 주기 실행.
@@ -29,6 +29,7 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 - **RecommendationService**: 좋아요 기반 시맨틱 추천 → 실패 시 기본 피드; 프로필 추천 라우트는 스텁(아래 갭 참고).
 - **ChatService**: Qdrant + 키워드 컨텍스트, 가드레일, LLM 답변 생성/검증, 불가 시 템플릿 응답.
 - **Reminder / Interaction 서비스**: 리마인더 생성/조회, 좋아요 생성/삭제, 사용자 likedPost 캐시와 좋아요 카운트 동기화.
+- **UserService**: 사용자 프로필 조회/수정, 좋아요한 게시물 목록 반환.
 - **LLMService & Vector Store**: LLM HTTP 클라이언트와 폴백, Qdrant 컬렉션 부트스트랩/업서트/검색.
 - **Ingest**: 소스 어댑터, 정규화/태깅/해싱, 중복 제거 후 LLM 요약/카테고리/임베딩 → Mongo 저장 → Qdrant 업서트.
 
@@ -44,9 +45,9 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 | --- | --- | --- | --- |
 | GET | `/` | 서비스 정보 | 이름/환경/메시지 |
 | GET | `/healthz` | 상태 확인 | 타임존 포함 |
-| GET | `/feed` | 기본 피드 | `category?`, 더미 source 제외, `posted_at` 정렬, 축약된 아이템 필드 |
+| GET | `/feed` | 기본 피드 | `category?`, 더미 source 제외, `posted_at` 정렬 |
 | GET | `/feed/reco-user` | 프로필 추천 스텁 | FeedService 시그니처 미스매치로 오류 상태 |
-| GET | `/feed/reco-likes` | 좋아요 기반 추천 | `user_id`, `limit`; 시맨틱 결과 → 실패 시 피드 폴백 |
+| GET | `/feed/reco-likes` | 좋아요 기반 추천 | `user_id`, `limit`; 시맨틱 → 실패 시 피드 폴백 |
 | GET | `/posts/{id}` | 게시물 단건 | Post 도큐먼트 원본 반환 |
 | GET | `/search` | 키워드/시맨틱 검색 | `q`, `mode=keyword|semantic`, `department?`, `grade?`; 실패 시 키워드 폴백 |
 | POST | `/likes` | 좋아요 추가 | `{user_id, post_id}` |
@@ -54,6 +55,9 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 | POST | `/reminders` | 리마인더 생성 | `{user_id, post_id, notify_at, channel}` |
 | GET | `/reminders` | 리마인더 목록 | `user_id`, 페이지네이션 |
 | POST | `/chat` | RAG 질의응답 | `{question, user_id?, department?, grade?}` |
+| GET | `/users/{user_id}` | 사용자 프로필 조회 | email, 단과/학과, 학년, interests 등 |
+| PUT | `/users/{user_id}` | 사용자 프로필 수정 | `college/department/grade/interests` 일부 필드 업데이트 |
+| GET | `/users/{user_id}/likes` | 좋아요 게시물 목록 | 페이징, feed 포맷 아이템 제공 |
 
 ## 6) Ingest & 백그라운드
 - 소스: 더미, 로컬 더미 데이터셋, 장학/인턴십 샘플 어댑터, HTML 크롤러, 카탈로그 기반 어댑터.

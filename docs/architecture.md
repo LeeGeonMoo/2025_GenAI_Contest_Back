@@ -1,10 +1,10 @@
 # Intelligent Campus Notice Platform - Backend Architecture
 
 ## 1) Current Scope
-- FastAPI app serving `/api/*` endpoints for feed, search, chat, likes, reminders, and a minimal recommendation stub.
-- MongoDB (Beanie ODM) stores posts, users, interactions, reminders. Qdrant stores embeddings; collection is auto-created on first use.
-- LLM calls (summary/classification/embedding/chat) are optional. When keys are missing the app falls back to deterministic summaries/embeddings so flows still work.
-- Dummy/local notice sources plus sample HTML crawling power ingest in development; APScheduler can run the ingest loop when enabled.
+- FastAPI app serving `/api/*` endpoints for feed, search, chat, likes, reminders, and user profile.
+- MongoDB (Beanie) + Qdrant; collection bootstraps on first use.
+- LLM calls are optional; deterministic summary/embedding fallbacks keep flows working when keys are missing.
+- Dummy/local notice sources + sample HTML crawling power ingest in dev; APScheduler can run the ingest loop when enabled.
 
 ## 2) Runtime Architecture
 ```
@@ -16,55 +16,59 @@ NoticeSource (dummy | local | catalog | HTML)
           │                           └─► Vector upsert to Qdrant (`notice_vectors`)
           │
           ▼
-FastAPI routers (/api) ─► Services ─► Mongo queries + Qdrant search
-                                    └─► LLM calls (optional)
+FastAPI (/api) ─► Services ─► Mongo queries + Qdrant search
+                             └─► Optional LLM calls
 ```
-- App lifecycle (`app/main.py`) wires CORS, includes `/api` router, and starts/stops Mongo and APScheduler.
-- Scheduler (`app/core/scheduler.py`) runs the ingest pipeline on an interval when `SCHEDULER_ENABLED=true`.
+- `app/main.py`: CORS, `/api` router, Mongo lifecycle hooks, APScheduler startup/shutdown.
+- `app/core/scheduler.py`: runs ingest pipeline on interval when `SCHEDULER_ENABLED=true`.
 
-## 3) Modules & Responsibilities
-- **API Layer** (`app/api/*`): request validation and simple orchestration.
-- **FeedService**: fetches posts sorted by `posted_at`, filters by `category`, excludes seed/dummy sources, formats items.
-- **SearchService**: keyword search via Mongo regex; semantic search via Qdrant using LLM embeddings, with automatic fallback to keyword.
-- **RecommendationService**: like-based semantic recommendations from recent liked posts; falls back to baseline feed. Profile route is stubbed (see gaps).
-- **ChatService**: RAG-style answer generation. Retrieves contexts from Qdrant + keyword search, applies guardrails, verifies LLM answers, or falls back to templated text.
-- **ReminderService / InteractionService**: CRUD helpers for reminders and likes; keeps user like cache and post like counts in sync.
-- **LLMService & Vector Store**: LLM HTTP client with fallbacks; Qdrant collection bootstrap, vector upsert/search helpers.
-- **Ingest** (`app/ingest/*`): source adapters, normalization/tagging/hash, pipeline that dedupes notices, enriches with LLM summary/category, writes Mongo + Qdrant.
+## 3) Modules
+- **API** (`app/api/*`): validation + routing.
+- **FeedService**: baseline feed by `posted_at`, `category` filter, dummy/seed source exclusion, response formatting.
+- **SearchService**: Mongo regex keyword search; LLM embedding + Qdrant semantic search with fallback to keyword.
+- **RecommendationService**: like-based semantic reco → fallback to baseline.
+- **ChatService**: Qdrant + keyword contexts, guardrails, LLM answer/verification, templated fallback.
+- **Reminder/Interaction**: reminders CRUD; likes add/remove; sync liked_post_ids and like counts.
+- **UserService**: user profile get/update; liked posts list.
+- **LLMService & Vector Store**: HTTP client with fallbacks; Qdrant bootstrap/upsert/search helpers.
+- **Ingest**: sources, normalize/tag/hash, LLM enrich, Mongo write, Qdrant upsert.
 
-## 4) Data Model (Mongo & Qdrant)
-- `posts`: `title`, `url`, `posted_at`, `deadline_at`, `body`, `summary`, `tags[]`, `college`, `department`, `audience_grade[]`, `category`, `source`, `hash` (unique), `likes`, timestamps.
-- `users`: `email` (unique), `college`, `department`, `grade`, `interests[]`, `liked_post_ids[]`, `preference_vector_id`, `created_at`.
-- `interactions`: `user_id`, `post_id`, `type` (`view|like|save`), `ts`, optional `metadata`.
-- `reminders`: `user_id`, `post_id`, `notify_at`, `channel` (`email|kakao`), `status`, `created_at`.
-- Qdrant (`notice_vectors`): single cosine vector of size `QDRANT_VECTOR_SIZE` with payload `{post_id, department, audience_grade, posted_at, deadline_at, tags, category, source}`.
+## 4) Data Model
+- `posts`: title, url, posted_at, deadline_at, body, summary, tags[], college, department, audience_grade[], category, source, hash (unique), likes, timestamps.
+- `users`: email (unique), college, department, grade, interests[], liked_post_ids[], preference_vector_id, created_at.
+- `interactions`: user_id, post_id, type (`view|like|save`), ts, metadata.
+- `reminders`: user_id, post_id, notify_at, channel (`email|kakao`), status, created_at.
+- Qdrant `notice_vectors`: single cosine vector (`QDRANT_VECTOR_SIZE`) + payload `{post_id, department, audience_grade, posted_at, deadline_at, tags, category, source}`.
 
-## 5) API Surface (prefix `/api`)
+## 5) API Surface (`/api` prefix)
 | Method | Path | Purpose | Notes |
 | --- | --- | --- | --- |
-| GET | `/` | Service info | name/environment message |
+| GET | `/` | Service info | name/environment/message |
 | GET | `/healthz` | Health | timezone + status |
-| GET | `/feed` | Baseline feed | `category?`, excludes dummy sources, sorted by `posted_at`; returns `{id,title,tags,category,source[],posted_at,deadline}` |
-| GET | `/feed/reco-user` | Profile stub | Currently calls FeedService with unsupported args (see gaps) |
-| GET | `/feed/reco-likes` | Like-based reco | `user_id`, `limit`; semantic from liked posts → fallback feed |
-| GET | `/posts/{id}` | Post detail | Returns raw Post document |
-| GET | `/search` | Keyword/semantic search | `q`, `mode=keyword|semantic`, `department?`, `grade?`; semantic falls back to keyword on failure |
-| POST | `/likes` | Like a post | `{user_id, post_id}` updates likes cache/count |
-| DELETE | `/likes/{user_id}/{post_id}` | Remove like | idempotent delete |
+| GET | `/feed` | Baseline feed | `category?`, excludes dummy/seed sources |
+| GET | `/feed/reco-user` | Profile reco stub | signature mismatch → error until fixed |
+| GET | `/feed/reco-likes` | Like-based reco | `user_id`, `limit`; semantic → fallback feed |
+| GET | `/posts/{id}` | Post detail | raw Post document |
+| GET | `/search` | Keyword/semantic | `q`, `mode=keyword|semantic`, `department?`, `grade?`; falls back to keyword |
+| POST | `/likes` | Add like | `{user_id, post_id}` |
+| DELETE | `/likes/{user_id}/{post_id}` | Remove like | idempotent |
 | POST | `/reminders` | Create reminder | `{user_id, post_id, notify_at, channel}` |
 | GET | `/reminders` | List reminders | `user_id`, pagination |
-| POST | `/chat` | RAG QA | `{question, user_id?, department?, grade?}` with guardrails and verification |
+| POST | `/chat` | RAG QA | `{question, user_id?, department?, grade?}` |
+| GET | `/users/{user_id}` | User profile | email, college/department/grade, interests |
+| PUT | `/users/{user_id}` | Update profile | `college/department/grade/interests` |
+| GET | `/users/{user_id}/likes` | Liked posts | paginated feed-format items |
 
-## 6) Ingest & Background Jobs
-- Sources: dummy notice, local dummy dataset, sample scholarship/internship adapters, optional HTML crawler, and catalog-driven adapters.
-- Pipeline: fetch → normalize/tag/hash → skip duplicates → LLM summary + category → embed → write Mongo → upsert vector to Qdrant.
-- Scheduler: optional APScheduler interval job runs the ingest pipeline; otherwise use `scripts/run_ingest.py`.
+## 6) Ingest & Background
+- Sources: dummy, local dataset, scholarship/internship samples, HTML crawler, catalog-driven adapters.
+- Pipeline: fetch → normalize/tag/hash → dedupe → LLM summary/category → embed → Mongo_write → Qdrant upsert.
+- APScheduler: optional ingest loop; manual run via `scripts/run_ingest.py`.
 
-## 7) Configuration & Ops Highlights
-- Key envs: Mongo/Qdrant connection, `QDRANT_VECTOR_SIZE`, `LLM_*` keys/base URLs, `SCHEDULER_ENABLED`, `CRAWLER_SAMPLE_HTML`, `BOARD_CATALOG_*`.
-- CORS allows `http://localhost:5173` and `http://localhost:3000`.
-- Vector collection is bootstrapped on first embed/search call; falls back to pseudo vectors when embedding keys are missing.
+## 7) Config/Ops
+- Key envs: Mongo/Qdrant connection, `QDRANT_VECTOR_SIZE`, `LLM_*`, `SCHEDULER_ENABLED`, `CRAWLER_SAMPLE_HTML`, `BOARD_CATALOG_*`.
+- CORS: `http://localhost:5173`, `http://localhost:3000`.
+- Vector collection bootstraps on first embed/search; pseudo vectors used when embedding keys are missing.
 
-## 8) Known Gaps / Alignment Items
-- `RecommendationService.profile_recommendations` still passes `department/grade` into `FeedService.get_feed`, which only accepts `category`; the `/feed/reco-user` route will error until the signature is aligned.
-- Feed scoring/advanced ranking, auth, rate limiting, and multi-channel notification delivery are not implemented yet (responses are simple lists with pagination meta).
+## 8) Known Gaps
+- `/feed/reco-user` currently errors (FeedService signature mismatch). Align signature/filters before use.
+- Advanced ranking, auth/rate limit, multi-channel notification delivery are not implemented; responses are simple list + meta.

@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+
+from app.services.user_service import UserService, UserUpdate
+
+router = APIRouter()
+service = UserService()
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    college: str | None = None
+    department: str | None = None
+    grade: str | None = None
+    interests: list[str] = []
+    created_at: str | None = None
+
+
+@router.get("/{user_id}", summary="사용자 프로필 조회")
+async def get_user(user_id: str):
+    user = await service.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.put("/{user_id}", summary="사용자 프로필 수정")
+async def update_user(user_id: str, payload: UserUpdate):
+    user = await service.update_user(user_id, payload)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.get("/{user_id}/likes", summary="사용자 좋아요 목록")
+async def list_likes(
+    user_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    return await service.list_likes(user_id=user_id, page=page, page_size=page_size)

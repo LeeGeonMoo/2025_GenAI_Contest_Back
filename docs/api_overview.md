@@ -32,6 +32,9 @@
   - Guardrails for abuse/out-of-scope → refusal message.
   - Retrieves Qdrant + keyword contexts, generates LLM answer with citations, verifies answer; falls back to templated answer if LLM unavailable or verification fails.
   - Response: `{answer, citations[], notices[], meta{question, refused, reason, source?}}`.
+- `GET /users/{user_id}` — user profile (email, college/department/grade, interests, timestamps).
+- `PUT /users/{user_id}` — update profile fields (`college/department/grade/interests` subset).
+- `GET /users/{user_id}/likes` — liked posts in feed item format, paginated.
 
 ## Example responses
 `GET /api/feed`:
