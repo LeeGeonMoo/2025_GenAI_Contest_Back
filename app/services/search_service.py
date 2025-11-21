@@ -20,7 +20,7 @@ class SearchService:
 
     async def search(
         self,
-        query: str,
+        query: Optional[str],
         category: Optional[str],
         source: Optional[List[str]],
         mode: str,
@@ -29,7 +29,8 @@ class SearchService:
     ) -> Dict[str, Any]:
         offset = max(page - 1, 0) * page_size
 
-        if mode == "semantic":
+        # 키워드가 없으면 semantic 검색 불가
+        if mode == "semantic" and query:
             semantic = await self._semantic_search(query, category, source, page_size, offset)
             if semantic:
                 total_pages = (
@@ -57,13 +58,15 @@ class SearchService:
 
     async def _semantic_search(
         self,
-        query: str,
+        query: Optional[str],
         category: Optional[str],
         source: Optional[List[str]],
         page_size: int,
         offset: int,
     ) -> Optional[Dict[str, Any]]:
-        vector = await self.llm_service.embed(query)
+        if not query or not query.strip():
+            return None
+        vector = await self.llm_service.embed(query.strip())
         if not vector:
             return None
 
@@ -119,15 +122,16 @@ class SearchService:
 
     async def _keyword_search(
         self,
-        query: str,
+        query: Optional[str],
         category: Optional[str],
         source: Optional[List[str]],
         page: int,
         page_size: int,
     ) -> Dict[str, Any]:
         filters = self._build_filters(category, source)
-        if query:
-            regex = {"$regex": query, "$options": "i"}
+        # query가 있으면 키워드 검색 추가, 없으면 필터만 적용
+        if query and query.strip():
+            regex = {"$regex": query.strip(), "$options": "i"}
             filters["$or"] = [
                 {"title": regex},
                 {"summary": regex},

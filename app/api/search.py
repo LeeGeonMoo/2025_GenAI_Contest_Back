@@ -10,7 +10,7 @@ service = SearchService()
 
 @router.get("", summary="Hybrid keyword/semantic search")
 async def search(
-    q: str = Query(..., min_length=1),
+    q: str | None = Query(default=None),
     category: str | None = Query(default=None),
     source: list[str] | None = Query(default=None),
     mode: str = Query("keyword", pattern="^(keyword|semantic)$"),
