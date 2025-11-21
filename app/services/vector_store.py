@@ -5,7 +5,7 @@ import logging
 from typing import Dict, Iterable, List, Optional
 from uuid import uuid4
 
-from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchAny, MatchValue, PointStruct, VectorParams
 
 from app.core.config import get_settings
 from app.db.qdrant import get_qdrant_client
@@ -77,6 +77,49 @@ async def search_similar(
             for point in result
         ]
 
+    hits = await asyncio.to_thread(_search)
+    return hits[offset:limit + offset]
+
+
+async def search_similar_with_filter(
+    vector: List[float],
+    post_ids: List[str],
+    limit: int,
+    offset: int = 0,
+) -> List[Dict]:
+    """
+    Search for similar vectors within a filtered set of post_ids.
+    """
+    if not post_ids:
+        return []
+    
+    await ensure_collection()
+    client = get_qdrant_client()
+    
+    def _search() -> List[Dict]:
+        result = client.search(
+            collection_name=get_settings().qdrant_collection_notices,
+            query_vector=vector,
+            limit=limit + offset,
+            query_filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="post_id",
+                        match=MatchAny(any=post_ids)
+                    )
+                ]
+            ),
+        )
+        return [
+            {
+                "id": str(point.id),
+                "score": point.score,
+                "payload": point.payload or {},
+                "post_id": (point.payload or {}).get("post_id"),
+            }
+            for point in result
+        ]
+    
     hits = await asyncio.to_thread(_search)
     return hits[offset:limit + offset]
 
