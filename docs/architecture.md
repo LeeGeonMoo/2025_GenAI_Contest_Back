@@ -27,9 +27,10 @@ FastAPI (/api) ─► Services ─► Mongo queries + Qdrant search
 - **FeedService**: baseline feed by `posted_at`, `category` filter, dummy/seed source exclusion, response formatting.
 - **SearchService**: Mongo regex keyword search; LLM embedding + Qdrant semantic search with fallback to keyword.
 - **RecommendationService**: like-based semantic reco → fallback to baseline.
-- **ChatService**: Qdrant + keyword contexts, guardrails, LLM answer/verification, templated fallback.
+- **ChatService**: session-aware (stores last 10 turns); greeting/guardrails; Qdrant + keyword contexts; LLM answer/verification; templated fallback.
 - **Reminder/Interaction**: reminders CRUD; likes add/remove; sync liked_post_ids and like counts.
 - **UserService**: user profile get/update; liked posts list.
+- **Conversation/Message**: Mongo documents storing chat sessions and turns (used by ChatService).
 - **LLMService & Vector Store**: HTTP client with fallbacks; Qdrant bootstrap/upsert/search helpers.
 - **Ingest**: sources, normalize/tag/hash, LLM enrich, Mongo write, Qdrant upsert.
 
@@ -38,6 +39,8 @@ FastAPI (/api) ─► Services ─► Mongo queries + Qdrant search
 - `users`: email (unique), college, department, grade, interests[], liked_post_ids[], preference_vector_id, created_at.
 - `interactions`: user_id, post_id, type (`view|like|save`), ts, metadata.
 - `reminders`: user_id, post_id, notify_at, channel (`email|kakao`), status, created_at.
+- `conversations`: session store `{user_id?, summary?, created_at, updated_at}`.
+- `messages`: `{conversation_id, role, content, created_at}`.
 - Qdrant `notice_vectors`: single cosine vector (`QDRANT_VECTOR_SIZE`) + payload `{post_id, department, audience_grade, posted_at, deadline_at, tags, category, source}`.
 
 ## 5) API Surface (`/api` prefix)
@@ -54,10 +57,12 @@ FastAPI (/api) ─► Services ─► Mongo queries + Qdrant search
 | DELETE | `/likes/{user_id}/{post_id}` | Remove like | idempotent |
 | POST | `/reminders` | Create reminder | `{user_id, post_id, notify_at, channel}` |
 | GET | `/reminders` | List reminders | `user_id`, pagination |
-| POST | `/chat` | RAG QA | `{question, user_id?, department?, grade?}` |
+| POST | `/chat` | RAG QA (session-aware) | `{question, user_id?, department?, grade?, session_id?}` |
 | GET | `/users/{user_id}` | User profile | email, college/department/grade, interests |
 | PUT | `/users/{user_id}` | Update profile | `college/department/grade/interests` |
 | GET | `/users/{user_id}/likes` | Liked posts | paginated feed-format items |
+| GET | `/conversations/{session_id}/messages` | Session messages | recent turns (for UI) |
+| POST | `/conversations/{session_id}/reset` | Reset session | clears history |
 
 ## 6) Ingest & Background
 - Sources: dummy, local dataset, scholarship/internship samples, HTML crawler, catalog-driven adapters.

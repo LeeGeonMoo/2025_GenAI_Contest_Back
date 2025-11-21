@@ -27,9 +27,10 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 - **FeedService**: `posted_at` 내림차순 피드, `category` 필터, 더미/시드 source 제외, 응답 포맷 변환.
 - **SearchService**: Mongo 정규식 키워드 검색, LLM 임베딩 + Qdrant 기반 시맨틱 검색(실패 시 키워드 폴백).
 - **RecommendationService**: 좋아요 기반 시맨틱 추천 → 실패 시 기본 피드; 프로필 추천 라우트는 스텁(아래 갭 참고).
-- **ChatService**: Qdrant + 키워드 컨텍스트, 가드레일, LLM 답변 생성/검증, 불가 시 템플릿 응답.
+- **ChatService**: 세션(최근 10턴) 및 인사/가드레일; Qdrant+키워드 컨텍스트; LLM 답변/검증; 템플릿 폴백.
 - **Reminder / Interaction 서비스**: 리마인더 생성/조회, 좋아요 생성/삭제, 사용자 likedPost 캐시와 좋아요 카운트 동기화.
 - **UserService**: 사용자 프로필 조회/수정, 좋아요한 게시물 목록 반환.
+- **Conversation/Message**: 챗봇 세션 및 대화 턴을 Mongo에 저장.
 - **LLMService & Vector Store**: LLM HTTP 클라이언트와 폴백, Qdrant 컬렉션 부트스트랩/업서트/검색.
 - **Ingest**: 소스 어댑터, 정규화/태깅/해싱, 중복 제거 후 LLM 요약/카테고리/임베딩 → Mongo 저장 → Qdrant 업서트.
 
@@ -38,6 +39,8 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 - `users`: `email`(유니크), `college`, `department`, `grade`, `interests[]`, `liked_post_ids[]`, `preference_vector_id`, `created_at`.
 - `interactions`: `user_id`, `post_id`, `type`(`view|like|save`), `ts`, 선택 `metadata`.
 - `reminders`: `user_id`, `post_id`, `notify_at`, `channel`(`email|kakao`), `status`, `created_at`.
+- `conversations`: `{user_id?, summary?, created_at, updated_at}` 세션.
+- `messages`: `{conversation_id, role, content, created_at}` 턴 로그.
 - Qdrant `notice_vectors`: 단일 코사인 벡터(`QDRANT_VECTOR_SIZE`) + payload `{post_id, department, audience_grade, posted_at, deadline_at, tags, category, source}`.
 
 ## 5) API 개요 (`/api` prefix)
@@ -54,10 +57,12 @@ FastAPI (/api) ─► Services ─► Mongo 쿼리 + Qdrant 검색
 | DELETE | `/likes/{user_id}/{post_id}` | 좋아요 제거 | 멱등 |
 | POST | `/reminders` | 리마인더 생성 | `{user_id, post_id, notify_at, channel}` |
 | GET | `/reminders` | 리마인더 목록 | `user_id`, 페이지네이션 |
-| POST | `/chat` | RAG 질의응답 | `{question, user_id?, department?, grade?}` |
+| POST | `/chat` | RAG 질의응답(세션) | `{question, user_id?, department?, grade?, session_id?}` |
 | GET | `/users/{user_id}` | 사용자 프로필 조회 | email, 단과/학과, 학년, interests 등 |
 | PUT | `/users/{user_id}` | 사용자 프로필 수정 | `college/department/grade/interests` 일부 필드 업데이트 |
 | GET | `/users/{user_id}/likes` | 좋아요 게시물 목록 | 페이징, feed 포맷 아이템 제공 |
+| GET | `/conversations/{session_id}/messages` | 세션 메시지 조회 | 최근 턴 조회 |
+| POST | `/conversations/{session_id}/reset` | 세션 초기화 | 히스토리 삭제 |
 
 ## 6) Ingest & 백그라운드
 - 소스: 더미, 로컬 더미 데이터셋, 장학/인턴십 샘플 어댑터, HTML 크롤러, 카탈로그 기반 어댑터.

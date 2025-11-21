@@ -28,13 +28,16 @@
 - `POST /reminders` — body `{user_id, post_id, notify_at, channel("email"|"kakao")}`; creates a reminder.
 - `GET /reminders` — query `user_id`, `page`, `page_size`; returns reminders + pagination meta.
 - `POST /chat`
-  - Body: `{question (3~400 chars), user_id?, department?, grade?}`
+  - Body: `{question (1~400 chars), user_id?, department?, grade?, session_id?}`
   - Guardrails for abuse/out-of-scope → refusal message.
+  - Session-aware: returns/accepts `meta.session_id`; greeting is handled without search.
   - Retrieves Qdrant + keyword contexts, generates LLM answer with citations, verifies answer; falls back to templated answer if LLM unavailable or verification fails.
-  - Response: `{answer, citations[], notices[], meta{question, refused, reason, source?}}`.
+  - Response: `{answer_md/answer, citations[id list], citation_details[], notices[], meta{question, refused, reason, source, session_id}}`.
 - `GET /users/{user_id}` — user profile (email, college/department/grade, interests, timestamps).
 - `PUT /users/{user_id}` — update profile fields (`college/department/grade/interests` subset).
 - `GET /users/{user_id}/likes` — liked posts in feed item format, paginated.
+- `GET /conversations/{session_id}/messages` — recent messages for a session.
+- `POST /conversations/{session_id}/reset` — clears a chat session.
 
 ## Example responses
 `GET /api/feed`:
