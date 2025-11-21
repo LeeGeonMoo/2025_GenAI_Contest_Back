@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 SYSTEM_PROMPT = (
     "너는 대학 공지사항 전문 어시스턴트다. 항상 근거를 공지 데이터에서 찾고 "
     "알 수 없으면 정중히 모른다고 답해라. 답변은 한국어로 보내고, 적절한 아이콘과 "
-    "마크다운을 사용해 가독성을 높여라. 링크는 따로 source_link 필드로 제공한다."
+    "마크다운을 사용해 가독성을 높여라. 링크는 본문에 한 번 언급하고, JSON의 source_link에도 포함한다."
 )
 
 OUT_OF_SCOPE_KEYWORDS = [
@@ -81,7 +81,11 @@ class ChatService:
         grade: Optional[str] = None,
         session_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        await self._ensure_db()
+        # Ensure DB init; if unavailable in test/offline environments, continue with empty data.
+        try:
+            await self._ensure_db()
+        except Exception:
+            logger.warning("DB unavailable; proceeding without DB context.")
         normalized = self._normalize_question(question)
         conversation = await self._get_or_create_conversation(session_id, user_id)
         history = await self._load_history(conversation.id) if conversation else []
@@ -445,7 +449,7 @@ class ChatService:
             "규칙:\n"
             "- 공지 근거 없는 내용은 답하지 말 것\n"
             "- citations에는 post_id와 title을 포함\n"
-            "- 답변은 마크다운 + 아이콘 사용, source_link는 따로 JSON 필드로 전달\n"
+            "- 답변은 마크다운 + 아이콘 사용, 링크는 본문에도 한 번 언급하고, source_link(JSON)에도 포함\n"
             'JSON 예시: {"answer": "...", "citations": [{"post_id":"...", "title":"...", "link":"..."}], "needs_more_context": false}'
         )
         messages.append({"role": "user", "content": user_content})
@@ -795,6 +799,7 @@ class ChatService:
                 await init_db()
             except Exception as exc:  # pragma: no cover - env without mongo
                 logger.warning("DB init failed or unavailable: %s", exc)
+                raise
 
     async def _respond_and_store(
         self,
