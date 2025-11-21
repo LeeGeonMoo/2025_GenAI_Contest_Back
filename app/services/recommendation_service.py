@@ -51,15 +51,13 @@ class RecommendationService:
         if semantic:
             return semantic
 
+        # fallback의 경우도 명세서 형식에 맞게 meta 수정
         fallback = await self.feed_service.get_feed(
-            department=None,
-            grade=None,
+            category=None,
             page=1,
             page_size=limit,
         )
-        fallback["meta"]["mode"] = "likes-fallback"
-        fallback["meta"]["limit"] = limit
-        fallback["meta"]["user_id"] = user_id
+        # fallback은 이미 올바른 형식이므로 그대로 반환
         return fallback
 
     async def _semantic_from_likes(
@@ -97,10 +95,10 @@ class RecommendationService:
         return {
             "items": items,
             "meta": {
-                "mode": "likes-semantic",
-                "limit": limit,
-                "user_id": user_id,
-                "source_likes": len(liked_posts),
+                "total": len(items),
+                "page": 1,
+                "page_size": limit,
+                "total_pages": 1,
             },
         }
 
@@ -167,6 +165,7 @@ class RecommendationService:
         def _extract_post_id(hit: Dict[str, Any]) -> Optional[str]:
             return hit.get("post_id") or hit.get("payload", {}).get("post_id") or hit.get("id")
 
+        # semantic score 순서 유지 (hits는 이미 점수 순으로 정렬되어 있음)
         ordered_ids = [
             ObjectId(post_id)
             for post_id in (_extract_post_id(hit) for hit in hits)
@@ -178,6 +177,7 @@ class RecommendationService:
         posts = await Post.find(In(Post.id, ordered_ids)).to_list()
         post_map = {str(post.id): post for post in posts}
 
+        # hits 순서대로 포스트를 가져와서 _format_post_item 사용
         items: List[Dict[str, Any]] = []
         for hit in hits:
             post_id = _extract_post_id(hit)
@@ -188,9 +188,11 @@ class RecommendationService:
             post = post_map.get(post_id)
             if not post:
                 continue
-            data = post.model_dump()
-            data["semantic_score"] = hit.get("score")
-            items.append(data)
+            # _format_post_item 사용하여 일관된 형식으로 변환
+            formatted_item = self.feed_service._format_post_item(post)
+            # 디버깅을 위해 semantic score 추가
+            formatted_item["semantic_score"] = hit.get("score")
+            items.append(formatted_item)
             if len(items) >= limit:
                 break
         return items
