@@ -140,7 +140,8 @@ class SearchService:
 
         offset = max(page - 1, 0) * page_size
 
-        cursor = Post.find(filters).skip(offset).limit(page_size)
+        # 최신순 정렬 추가 (-posted_at)
+        cursor = Post.find(filters).sort(-Post.posted_at).skip(offset).limit(page_size)
         total = await Post.find(filters).count()
         items: List[Post] = await cursor.to_list()
 
