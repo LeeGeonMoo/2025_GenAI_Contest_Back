@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.models.post import Post
 from app.services.feed_service import FeedService
@@ -8,8 +8,8 @@ def _make_post(**overrides):
     base = {
         "title": "테스트 공지",
         "url": "https://example.com",
-        "posted_at": datetime.utcnow() - timedelta(days=1),
-        "deadline_at": datetime.utcnow() + timedelta(days=5),
+        "posted_at": datetime.now(timezone.utc) - timedelta(days=1),
+        "deadline_at": datetime.now(timezone.utc) + timedelta(days=5),
         "body": "본문",
         "summary": "요약",
         "tags": ["test"],
@@ -20,8 +20,8 @@ def _make_post(**overrides):
         "source": "test-source",
         "hash": "hash123",
         "likes": 0,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
     base.update(overrides)
     return Post.model_construct(**base)
@@ -40,8 +40,8 @@ def test_score_contains_reason_fields():
 
 def test_deadline_boost_favors_urgent_notice():
     service = FeedService()
-    urgent = _make_post(deadline_at=datetime.utcnow() + timedelta(days=1))
-    relaxed = _make_post(deadline_at=datetime.utcnow() + timedelta(days=10))
+    urgent = _make_post(deadline_at=datetime.now(timezone.utc) + timedelta(days=1))
+    relaxed = _make_post(deadline_at=datetime.now(timezone.utc) + timedelta(days=10))
 
     urgent_boost = service._deadline_boost(urgent)
     relaxed_boost = service._deadline_boost(relaxed)

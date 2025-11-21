@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from beanie import PydanticObjectId
@@ -61,8 +62,7 @@ class FeedService:
         return await Post.get(post_id)
 
     def _format_post_item(self, post: Post) -> Dict[str, Any]:
-        """Post 모델을 API 응답 형식으로 변환"""
-        # source를 객체 배열로 변환
+        """Post 객체를 API 응답 포맷으로 변환"""
         source_list = []
         if post.source:
             source_list.append({"name": post.source, "url": None})
@@ -76,3 +76,55 @@ class FeedService:
             "posted_at": post.posted_at.isoformat() if post.posted_at else None,
             "deadline": post.deadline_at.isoformat() if post.deadline_at else None,
         }
+
+    # --------- Scoring helpers (retained for compatibility with tests) ---------
+    def _score_post(
+        self,
+        post: Post,
+        department: Optional[str],
+        grade: Optional[str],
+    ) -> Dict[str, Any]:
+        dept_match = 1.0 if department and post.department == department else 0.0
+        grade_match = 1.0 if grade and grade in (post.audience_grade or []) else 0.0
+
+        deadline_boost = self._deadline_boost(post)
+        recency_boost = self._recency_boost(post)
+
+        score = (
+            0.4 * dept_match
+            + 0.2 * grade_match
+            + 0.2 * deadline_boost
+            + 0.2 * recency_boost
+        )
+        return {
+            "id": str(post.id),
+            "title": post.title,
+            "score": round(score, 4),
+            "rank_reason": {
+                "dept_match": dept_match,
+                "grade_match": grade_match,
+                "deadline_boost": deadline_boost,
+                "recency_boost": recency_boost,
+            },
+        }
+
+    def _deadline_boost(self, post: Post) -> float:
+        if not post.deadline_at or not post.posted_at:
+            return 0.5
+        delta_days = (post.deadline_at - post.posted_at).total_seconds() / 86400
+        if delta_days <= 0:
+            return 0.1
+        return max(0.1, 1 / (1 + delta_days))
+
+    def _recency_boost(self, post: Post) -> float:
+        if not post.posted_at:
+            return 0.3
+        now = datetime.now(timezone.utc)
+        posted_at = post.posted_at
+        # Naive datetime은 UTC 기준으로 간주
+        if posted_at.tzinfo is None:
+            posted_at = posted_at.replace(tzinfo=timezone.utc)
+        delta_hours = (now - posted_at).total_seconds() / 3600
+        if delta_hours < 0:
+            delta_hours = 0
+        return max(0.1, 1 / (1 + delta_hours / 24))

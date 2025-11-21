@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 from uuid import uuid4
 
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
 
 from app.core.config import get_settings
 from app.db.qdrant import get_qdrant_client
@@ -79,3 +79,43 @@ async def search_similar(
 
     hits = await asyncio.to_thread(_search)
     return hits[offset:limit + offset]
+
+
+async def fetch_vectors_by_post_ids(post_ids: Iterable[str]) -> Dict[str, List[float]]:
+    """
+    Fetch stored notice vectors by their post_id payload.
+    Returns a mapping of post_id -> vector (first match per post).
+    """
+    ids = list(post_ids)
+    if not ids:
+        return {}
+
+    await ensure_collection()
+    client = get_qdrant_client()
+
+    def _fetch() -> Dict[str, List[float]]:
+        vectors: Dict[str, List[float]] = {}
+        for pid in ids:
+            points, _ = client.scroll(
+                collection_name=get_settings().qdrant_collection_notices,
+                limit=1,
+                with_vectors=True,
+                filter=Filter(
+                    must=[FieldCondition(key="post_id", match=MatchValue(value=pid))]
+                ),
+            )
+            if not points:
+                continue
+            vector = points[0].vector
+            # vector may be dict when using named vectors; handle list/dict gracefully
+            if isinstance(vector, dict):
+                # take the first vector if multiple names exist
+                try:
+                    vector = next(iter(vector.values()))
+                except StopIteration:
+                    continue
+            if isinstance(vector, list):
+                vectors[pid] = vector
+        return vectors
+
+    return await asyncio.to_thread(_fetch)

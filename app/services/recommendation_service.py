@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from beanie.operators import In
 from bson import ObjectId
@@ -83,13 +83,8 @@ class RecommendationService:
             return None
 
         liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
-        combined_text = " ".join(
-            filter(None, [(post.summary or post.body) for post in liked_posts])
-        ).strip()
-        if not combined_text:
-            return None
-
-        vector = await self.llm_service.embed(combined_text)
+        combined_text = " ".join(filter(None, [(post.summary or post.body) for post in liked_posts])).strip()
+        vector = await self._user_vector(liked_posts, combined_text)
         if not vector:
             return None
 
@@ -108,6 +103,60 @@ class RecommendationService:
                 "source_likes": len(liked_posts),
             },
         }
+
+    async def _user_vector(self, liked_posts: List[Post], combined_text: str) -> Optional[List[float]]:
+        """
+        Build a user preference vector.
+        - Few likes: re-embed the combined text to capture shared context.
+        - Many likes: prefer averaging stored post vectors to save LLM calls.
+        - Fallback: if averaging fails, attempt a fresh embed.
+        """
+        like_count = len(liked_posts)
+        # For small samples, re-embed text (higher fidelity, small cost).
+        if like_count <= 5 and combined_text:
+            vector = await self.llm_service.embed(combined_text)
+            if vector:
+                return self._l2_normalize(vector)
+
+        # Try averaging stored vectors from Qdrant.
+        post_ids = [str(post.id) for post in liked_posts]
+        stored = await vector_store.fetch_vectors_by_post_ids(post_ids)
+        averaged = self._mean_vector(stored.values())
+        if averaged:
+            return averaged
+
+        # Fallback to text embedding if averaging failed.
+        if combined_text:
+            vector = await self.llm_service.embed(combined_text)
+            if vector:
+                return self._l2_normalize(vector)
+        return None
+
+    def _mean_vector(self, vectors: Iterable[List[float]]) -> Optional[List[float]]:
+        vectors = [vec for vec in vectors if vec]
+        if not vectors:
+            return None
+
+        length = len(vectors[0])
+        summed = [0.0] * length
+        used = 0
+        for vec in vectors:
+            # Skip vectors with mismatched dimensions
+            if len(vec) != length:
+                continue
+            for i, value in enumerate(vec):
+                summed[i] += value
+            used += 1
+        if used == 0:
+            return None
+        averaged = [value / used for value in summed]
+        return self._l2_normalize(averaged)
+
+    def _l2_normalize(self, vector: List[float]) -> List[float]:
+        norm = sum(v * v for v in vector) ** 0.5
+        if norm == 0:
+            return vector
+        return [v / norm for v in vector]
 
     async def _posts_from_hits(
         self,
