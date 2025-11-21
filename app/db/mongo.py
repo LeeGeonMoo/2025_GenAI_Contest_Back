@@ -7,6 +7,8 @@ from app.core.config import get_settings
 from app.models.post import Post
 from app.models.user import User
 from app.models.interaction import Interaction
+from app.models.reminder import Reminder
+from app.models.conversation import Conversation, Message
 
 mongo_client: AsyncIOMotorClient | None = None
 
@@ -23,7 +25,7 @@ async def init_db() -> None:
     mongo_client = AsyncIOMotorClient(settings.mongo_url)
     await init_beanie(
         database=mongo_client[settings.mongo_db],
-        document_models=[Post, User, Interaction],
+        document_models=[Post, User, Interaction, Reminder, Conversation, Message],
     )
 
 
