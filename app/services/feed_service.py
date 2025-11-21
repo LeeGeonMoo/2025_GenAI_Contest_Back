@@ -22,17 +22,6 @@ class FeedService:
         filters: Dict[str, Any] = {}
         if category:
             filters["category"] = category
-        exclude_sources = {
-            None,
-            "",
-            "seed_posts",
-            "dummy-source",
-            "scholarship-board",
-            "internship-board",
-            "scholarship-source",
-            "internship-source",
-        }
-        filters["source"] = {"$nin": list(exclude_sources)}
 
         offset = max(page - 1, 0) * page_size
 
@@ -64,8 +53,13 @@ class FeedService:
     def _format_post_item(self, post: Post) -> Dict[str, Any]:
         """Post 객체를 API 응답 포맷으로 변환"""
         source_list = []
-        if post.source:
-            source_list.append({"name": post.source, "url": None})
+        # department가 있으면 name으로, url을 url로 사용
+        if post.department:
+            source_list.append({
+                "name": post.department,
+                "url": post.url if post.url else None
+            })
+            # source_list에 많이 넣을 수도 있겠다 이거 가지고.
 
         return {
             "id": str(post.id),
