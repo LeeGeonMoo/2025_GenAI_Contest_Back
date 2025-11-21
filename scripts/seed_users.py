@@ -10,6 +10,12 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
+import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from app.db.mongo import close_db, init_db
 from app.models.interaction import Interaction
@@ -20,16 +26,21 @@ from app.models.user import User
 async def seed_users() -> None:
     await init_db()
 
-    user = await User.find_one(User.email == "student1@snu.ac.kr")
+    # 프론트엔드에서 사용하는 테스트용 user 생성
+    user = await User.find_one(User.email == "lgmoo2002@snu.ac.kr")
     if not user:
         user = User(
-            email="student1@snu.ac.kr",
+            email="lgmoo2002@snu.ac.kr",
+            name="이건무",
             college="공과대학",
-            department="컴퓨터공학부",
-            grade="3",
-            interests=["인턴십", "장학금"],
+            department="기계공학부",
+            grade="4",
+            interests=["채용/인턴", "AI/데이터"],
         )
         await user.insert()
+        print(f"Created user: {user.email} ({user.id})")
+    else:
+        print(f"User already exists: {user.email} ({user.id})")
 
     posts = await Post.find().sort(-Post.posted_at).limit(3).to_list()
     liked_ids = [str(post.id) for post in posts]

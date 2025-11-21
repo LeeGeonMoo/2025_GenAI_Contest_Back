@@ -8,20 +8,20 @@ router = APIRouter()
 service = SearchService()
 
 
-@router.get("", summary="Hybrid keyword/semantic search (semantic stub)")
+@router.get("", summary="Hybrid keyword/semantic search")
 async def search(
-    q: str = Query(..., min_length=1),
+    q: str | None = Query(default=None),
+    category: str | None = Query(default=None),
+    source: list[str] | None = Query(default=None),
     mode: str = Query("keyword", pattern="^(keyword|semantic)$"),
-    department: str | None = Query(default=None),
-    grade: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=50),
 ):
     return await service.search(
         query=q,
+        category=category,
+        source=source,
         mode=mode,
-        department=department,
-        grade=grade,
         page=page,
         page_size=page_size,
     )
