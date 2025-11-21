@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import feed, posts, search, likes, reminders, chat, users
+from app.api import feed, posts, search, likes, chat, users
 from app.core.config import get_settings
 
 router = APIRouter()
@@ -30,6 +30,5 @@ router.include_router(feed.router, prefix="/feed", tags=["feed"])
 router.include_router(posts.router, prefix="/posts", tags=["posts"])
 router.include_router(search.router, prefix="/search", tags=["search"])
 router.include_router(likes.router, prefix="/likes", tags=["interactions"])
-router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 router.include_router(chat.router, prefix="/chat", tags=["chat"])
 router.include_router(users.router, prefix="/users", tags=["users"])
