@@ -11,6 +11,7 @@ from app.services.feed_service import FeedService
 
 
 class UserUpdate(BaseModel):
+    name: Optional[str] = None
     college: Optional[str] = None
     department: Optional[str] = None
     grade: Optional[str] = None
@@ -31,6 +32,9 @@ class UserService:
         updates: Dict[str, Any] = payload.model_dump(exclude_none=True)
         for key, value in updates.items():
             setattr(user, key, value)
+        # updated_at 갱신
+        from datetime import datetime
+        user.updated_at = datetime.utcnow()
         await user.save()
         return user
 

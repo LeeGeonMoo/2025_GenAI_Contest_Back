@@ -9,22 +9,21 @@ router = APIRouter()
 service = UserService()
 
 
-class UserResponse(BaseModel):
-    id: str
-    email: str
-    college: str | None = None
-    department: str | None = None
-    grade: str | None = None
-    interests: list[str] = []
-    created_at: str | None = None
-
-
 @router.get("/{user_id}", summary="사용자 프로필 조회")
 async def get_user(user_id: str):
     user = await service.get_user(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    # 프론트엔드 명세서에 맞게 응답 형식 변환
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "college": user.college,
+        "department": user.department,
+        "grade": user.grade,
+        "interests": user.interests or [],
+    }
 
 
 @router.put("/{user_id}", summary="사용자 프로필 수정")
@@ -32,7 +31,17 @@ async def update_user(user_id: str, payload: UserUpdate):
     user = await service.update_user(user_id, payload)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return user
+    # 프론트엔드 명세서에 맞게 응답 형식 변환
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "college": user.college,
+        "department": user.department,
+        "grade": user.grade,
+        "interests": user.interests or [],
+        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+    }
 
 
 @router.get("/{user_id}/likes", summary="사용자 좋아요 목록")

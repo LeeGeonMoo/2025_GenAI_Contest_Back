@@ -9,6 +9,7 @@ from pydantic import Field
 
 class User(Document):
     email: Indexed(str, unique=True)
+    name: Optional[str] = None
     college: Optional[str] = None
     department: Optional[str] = None
     grade: Optional[str] = None
@@ -16,6 +17,7 @@ class User(Document):
     liked_post_ids: List[str] = Field(default_factory=list)
     preference_vector_id: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
         name = "users"
