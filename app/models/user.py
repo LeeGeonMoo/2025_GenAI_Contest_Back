@@ -16,6 +16,8 @@ class User(Document):
     interests: List[str] = Field(default_factory=list)
     liked_post_ids: List[str] = Field(default_factory=list)
     preference_vector_id: Optional[str] = None
+    recommend_email: bool = True  # "오늘의 추천!" 알림 설정
+    deadline_alert: bool = False  # "마감 기한 Alert" 알림 설정
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

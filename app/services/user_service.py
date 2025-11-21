@@ -19,6 +19,11 @@ class UserUpdate(BaseModel):
     interests: Optional[List[str]] = Field(default=None)
 
 
+class NotificationUpdate(BaseModel):
+    recommend_email: Optional[bool] = None
+    deadline_alert: Optional[bool] = None
+
+
 class UserService:
     def __init__(self) -> None:
         self.feed_service = FeedService()
@@ -106,4 +111,34 @@ class UserService:
                 "page_size": page_size,
                 "total_pages": total_pages,
             },
+        }
+
+    async def get_notifications(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """사용자의 알림 설정 조회"""
+        user = await User.get(user_id)
+        if not user:
+            return None
+        return {
+            "recommend_email": user.recommend_email,
+            "deadline_alert": user.deadline_alert,
+        }
+
+    async def update_notifications(
+        self, user_id: str, payload: NotificationUpdate
+    ) -> Optional[Dict[str, Any]]:
+        """사용자의 알림 설정 업데이트"""
+        user = await User.get(user_id)
+        if not user:
+            return None
+        updates: Dict[str, Any] = payload.model_dump(exclude_none=True)
+        for key, value in updates.items():
+            setattr(user, key, value)
+        # updated_at 갱신
+        from datetime import datetime
+        user.updated_at = datetime.utcnow()
+        await user.save()
+        return {
+            "recommend_email": user.recommend_email,
+            "deadline_alert": user.deadline_alert,
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
         }
