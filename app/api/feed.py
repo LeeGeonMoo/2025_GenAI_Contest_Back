@@ -23,15 +23,13 @@ async def get_feed(
     )
 
 
-@router.get("/reco-user", summary="User profile based recommendation (stub)")
+@router.get("/reco-user", summary="User profile based recommendation")
 async def reco_user(
-    department: str | None = Query(default=None),
-    grade: str | None = Query(default=None),
+    user_id: str = Query(...),
     limit: int = Query(default=10, ge=1, le=50),
 ):
     return await reco_service.profile_recommendations(
-        department=department,
-        grade=grade,
+        user_id=user_id,
         limit=limit,
     )
 

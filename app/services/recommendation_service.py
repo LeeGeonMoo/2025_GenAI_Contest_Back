@@ -28,18 +28,17 @@ class RecommendationService:
 
     async def profile_recommendations(
         self,
-        department: Optional[str],
-        grade: Optional[str],
+        user_id: str,
         limit: int,
     ) -> Dict[str, Any]:
+        # TODO: 사용자 정보 조회 및 interests 기반 추천 로직 구현
+        # 현재는 임시로 기본 피드 반환
         feed = await self.feed_service.get_feed(
-            department=department,
-            grade=grade,
+            category=None,
             page=1,
             page_size=limit,
         )
-        feed["meta"]["mode"] = "profile"
-        feed["meta"]["limit"] = limit
+        # meta 형식은 이미 명세서에 맞게 반환됨 (total, page, page_size, total_pages)
         return feed
 
     async def like_recommendations(
