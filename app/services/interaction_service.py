@@ -39,9 +39,10 @@ class InteractionService:
             ts=datetime.utcnow(),
         ).insert()
 
-        liked_ids = set(user.liked_post_ids or [])
-        liked_ids.add(post_id)
-        user.liked_post_ids = list(liked_ids)
+        liked_ids = [pid for pid in (user.liked_post_ids or []) if pid]
+        if post_id not in liked_ids:
+            liked_ids.append(post_id)
+        user.liked_post_ids = liked_ids
         await user.save()
 
         post.likes += 1
