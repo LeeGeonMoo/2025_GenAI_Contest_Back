@@ -29,7 +29,7 @@ FastAPI (/api) → Services → Mongo 쿼리 + Qdrant 검색
 - FeedService: posted_at 정렬, category 필터, 더미/시드 source 제외, 포맷팅.
 - SearchService: Mongo 정규식 키워드, LLM 임베딩 + Qdrant 시맨틱(실패 시 키워드).
 - RecommendationService: 좋아요 기반 시맨틱 → 실패 시 기본 피드.
-- ChatService: 세션(최근 10턴), 인사/가드레일, Qdrant+키워드 컨텍스트, LLM 답변/검증, 템플릿 폴백.
+- ChatService: 세션(최근 10턴, intent/meta 저장), 인사/종료/가드레일, Qdrant+키워드 컨텍스트, 최근 citations 기반 follow-up, LLM 답변/검증, 템플릿 폴백, JSON 파싱 보강.
 - Reminder/Interaction: 리마인더 CRUD, 좋아요 생성/삭제, liked_post_ids/like 카운트 동기화.
 - UserService: 프로필 조회/수정, 좋아요 게시물 목록.
 - Conversation/Message: 세션/메시지 Mongo 도큐먼트.
