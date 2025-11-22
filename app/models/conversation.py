@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from beanie import Document, Indexed
 from pydantic import Field
@@ -10,6 +10,9 @@ from pydantic import Field
 class Conversation(Document):
     user_id: Optional[str] = None
     summary: Optional[str] = None
+    last_query: Optional[str] = None
+    last_intent: Optional[str] = None
+    last_citations: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

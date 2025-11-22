@@ -22,9 +22,10 @@ from beanie.exceptions import CollectionWasNotInitialized
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = (
-    "너는 대학 공지사항 전문 어시스턴트다. 항상 근거를 공지 데이터에서 찾고 "
-    "알 수 없으면 정중히 모른다고 답해라. 답변은 한국어로 보내고, 적절한 아이콘과 "
-    "마크다운을 사용해 가독성을 높여라. 링크는 본문에 한 번 언급하고, JSON의 source_link에도 포함한다."
+    "너는 대학 공지사항 전문 어시스턴트다. 항상 근거를 공지 데이터에서 찾고, 없으면 정중히 모른다고 답해라. "
+    "모르면 상담/위로/추측 대신 '정보가 없습니다'라고 하라. "
+    "답변은 한국어로, 두괄식 요약 → 세부 bullet/번호 리스트 순으로 짧게 정리하고, 마크다운/아이콘을 활용해 가독성을 높여라. "
+    "링크는 본문에도 한 번 언급하고, JSON의 source_link에도 포함한다."
 )
 
 OUT_OF_SCOPE_KEYWORDS = [
@@ -126,13 +127,27 @@ class ChatService:
                 False,
                 "greeting",
                 source="system",
+                intent="greeting",
+            )
+        if self._is_goodbye(normalized):
+            return await self._respond_and_store(
+                conversation,
+                history,
+                question,
+                self._goodbye_message(),
+                [],
+                [],
+                False,
+                "goodbye",
+                source="system",
+                intent="goodbye",
             )
 
-        intent = self._detect_intent(normalized, history)
+        intent = self._detect_intent(normalized, history, conversation)
 
         contexts: List[Dict[str, Any]] = []
         if intent == "followup":
-            contexts = await self._followup_contexts(history, department, grade)
+            contexts = await self._followup_contexts(conversation, department, grade)
         if not contexts:
             contexts = await self._retrieve_contexts(
                 normalized,
@@ -149,6 +164,7 @@ class ChatService:
                 [],
                 True,
                 "no_context",
+                intent=intent,
             )
 
         grounded = await self._generate_grounded_answer(normalized, contexts)
@@ -162,11 +178,39 @@ class ChatService:
                 [],
                 True,
                 "llm_unavailable",
+                intent=intent,
+            )
+
+        status = grounded.get("status", "success")
+        if status == "no_info":
+            return await self._respond_and_store(
+                conversation,
+                history,
+                question,
+                self._refusal_message_for_reason("no_context", question),
+                [],
+                [],
+                True,
+                "no_context",
+                intent=intent,
+            )
+        if status == "fallback":
+            return await self._respond_and_store(
+                conversation,
+                history,
+                question,
+                grounded.get("answer_md") or self._fallback_answer(contexts),
+                grounded.get("citations") or [],
+                contexts,
+                False,
+                "success",
+                source_links=grounded.get("source_links", []),
+                source=grounded.get("source", "fallback"),
+                intent=intent,
             )
 
         answer_text = grounded.get("answer_md") or grounded.get("answer")
         citations = grounded.get("citations") or []
-        # normalize citations to list of dicts
         norm_citations: List[Dict[str, Any]] = []
         for c in citations:
             if isinstance(c, dict):
@@ -197,6 +241,7 @@ class ChatService:
                 [],
                 True,
                 "verification_failed",
+                intent=intent,
             )
 
         return await self._respond_and_store(
@@ -210,6 +255,7 @@ class ChatService:
             "success",
             source_links=grounded.get("source_links", []),
             source=grounded.get("source", "llm"),
+            intent=intent,
         )
 
     async def reset_session(self, session_id: str) -> bool:
@@ -450,13 +496,15 @@ class ChatService:
             "- 공지 근거 없는 내용은 답하지 말 것\n"
             "- citations에는 post_id와 title을 포함\n"
             "- 답변은 마크다운 + 아이콘 사용, 링크는 본문에도 한 번 언급하고, source_link(JSON)에도 포함\n"
+            "- 답변 길이: 400자 이하, 항목은 3~4개 이하로 짧게 요약\n"
+            "- citations/목록은 최대 3건까지만 포함\n"
             'JSON 예시: {"answer": "...", "citations": [{"post_id":"...", "title":"...", "link":"..."}], "needs_more_context": false}'
         )
         messages.append({"role": "user", "content": user_content})
         try:
             content = await self.llm_service.client.chat_completion(
                 messages=messages,
-                max_tokens=560,
+                max_tokens=900,
                 temperature=0.2,
             )
         except (LLMDisabledError, LLMRequestError) as exc:
@@ -469,14 +517,21 @@ class ChatService:
             }
 
         parsed = self._parse_llm_response(content, contexts)
-        if parsed is None:
+        status = parsed.get("status")
+
+        if status == "error":
             logger.warning("Failed to parse LLM chat response: %s", content)
             return {
+                "status": "fallback",
                 "answer_md": self._fallback_answer(contexts),
                 "citations": [{"post_id": ctx["post_id"], "title": ctx["title"], "link": ctx.get("source_link")} for ctx in contexts],
                 "source": "fallback",
                 "source_links": [ctx.get("source_link") for ctx in contexts if ctx.get("source_link")],
             }
+        if status == "no_info":
+            return {"status": "no_info"}
+
+        parsed["status"] = "success"
         parsed["source"] = "llm"
         return parsed
 
@@ -486,7 +541,7 @@ class ChatService:
         contexts: Sequence[Dict[str, Any]],
     ) -> Optional[Dict[str, Any]]:
         if not raw:
-            return None
+            return {"status": "error", "reason": "empty_raw"}
         cleaned = raw.strip()
         if cleaned.startswith("```"):
             cleaned = cleaned.strip("`")
@@ -496,14 +551,14 @@ class ChatService:
         try:
             payload = json.loads(cleaned)
         except json.JSONDecodeError:
-            return None
+            return {"status": "error", "reason": "json_parse_error"}
 
         answer = (payload.get("answer") or "").strip()
         citations = payload.get("citations") or []
         needs_more = bool(payload.get("needs_more_context"))
 
         if not answer or needs_more:
-            return None
+            return {"status": "no_info"}
 
         valid_ids = {ctx["post_id"] for ctx in contexts}
         filtered = []
@@ -521,7 +576,8 @@ class ChatService:
                 if c in valid_ids:
                     filtered.append({"post_id": c, "title": None, "link": None})
         if not filtered:
-            return None
+            # 답변은 있으나 인용이 없으면 정보 부족으로 처리
+            return {"status": "no_info"}
         return {"answer_md": answer, "citations": filtered, "source_links": links}
 
     async def _verify_answer(
@@ -705,6 +761,7 @@ class ChatService:
         session_id: str,
         source_links: Optional[List[str]] = None,
         source: str = "llm",
+        intent: Optional[str] = None,
     ) -> Dict[str, Any]:
         citation_ids = [
             c["post_id"] if isinstance(c, dict) else c
@@ -723,6 +780,7 @@ class ChatService:
                 "reason": reason,
                 "session_id": session_id,
                 "source": source,
+                "intent": intent,
             },
         }
 
@@ -774,22 +832,42 @@ class ChatService:
             "\n필요한 정보를 최대한 공지 근거와 함께 알려드릴게요!"
         )
 
-    def _detect_intent(self, question: str, history: Sequence[Dict[str, str]]) -> str:
+    def _is_goodbye(self, question: str) -> bool:
+        endings = {"잘가", "안녕히 계세요", "고마워", "수고했어", "바이", "goodbye", "bye"}
+        q = question.lower()
+        return any(q == e or q.endswith(e) for e in endings)
+
+    def _goodbye_message(self) -> str:
+        return (
+            "대화를 종료할게요. 도움이 필요하면 언제든 다시 불러주세요! 🙌\n"
+            "공지 마감/링크/지원 자격 등 궁금한 게 있으면 편하게 물어보세요."
+        )
+
+    def _detect_intent(self, question: str, history: Sequence[Dict[str, str]], conversation: Optional[Conversation]) -> str:
         lowered = question.lower()
-        followup_triggers = ["그거", "그 공지", "거기", "그건", "지원 자격", "링크", "마감일"]
+        followup_triggers = ["그거", "그 공지", "거기", "그건", "지원 자격", "링크", "마감일", "언제까지", "자세히"]
+        if conversation and conversation.last_citations:
+            return "followup"
         if any(t in lowered for t in followup_triggers):
             return "followup"
         return "search"
 
     async def _followup_contexts(
         self,
-        history: Sequence[Dict[str, str]],
+        conversation: Optional[Conversation],
         department: Optional[str],
         grade: Optional[str],
     ) -> List[Dict[str, Any]]:
-        # TODO: 향후 히스토리에서 citation/post_id를 저장해 해당 공지를 우선 제공하도록 확장.
-        # 현재는 히스토리 기반 컨텍스트가 없으면 빈 리스트를 반환해 일반 검색으로 폴백.
-        return []
+        if not conversation or not conversation.last_citations:
+            return []
+        ids = [cid for cid in conversation.last_citations if cid]
+        if not ids:
+            return []
+        posts = await Post.find(In("_id", [ObjectId(cid) for cid in ids if ObjectId.is_valid(cid)])).to_list()
+        contexts: List[Dict[str, Any]] = []
+        for post in posts:
+            contexts.append(self._format_context(post, score=0.5, signals={"followup": True}))
+        return contexts
 
     async def _ensure_db(self) -> None:
         try:
@@ -813,8 +891,25 @@ class ChatService:
         reason: str,
         source_links: Optional[List[str]] = None,
         source: str = "llm",
+        intent: Optional[str] = None,
     ) -> Dict[str, Any]:
         await self._append_history(str(conversation.id) if conversation else None, question, answer_md)
+        if conversation:
+            try:
+                await conversation.update(
+                    {
+                        "$set": {
+                            "last_query": question,
+                            "last_intent": intent,
+                            "last_citations": [
+                                c["post_id"] if isinstance(c, dict) else c for c in citations
+                            ],
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    }
+                )
+            except Exception:
+                pass
         return self._build_response(
             answer_md=answer_md,
             citations=citations,
@@ -825,4 +920,5 @@ class ChatService:
             session_id=str(conversation.id) if conversation else "",
             source_links=source_links,
             source=source,
+            intent=intent,
         )
