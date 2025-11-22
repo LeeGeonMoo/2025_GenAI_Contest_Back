@@ -123,7 +123,7 @@ class RecommendationService:
 
         object_ids = [
             ObjectId(post_id)
-            for post_id in user.liked_post_ids[-5:]
+            for post_id in user.liked_post_ids
             if ObjectId.is_valid(post_id)
         ]
         if not object_ids:
@@ -132,8 +132,10 @@ class RecommendationService:
         liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
         liked_map = {str(post.id): post for post in liked_posts}
         ordered_liked_posts = [
-            liked_map[pid] for pid in user.liked_post_ids[-5:] if pid in liked_map
+            liked_map[pid] for pid in user.liked_post_ids if pid in liked_map
         ]
+        if not ordered_liked_posts:
+            return None
         combined_text = " ".join(
             filter(None, [(post.summary or post.body) for post in ordered_liked_posts])
         ).strip()
