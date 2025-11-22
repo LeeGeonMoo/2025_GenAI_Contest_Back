@@ -129,6 +129,19 @@ class ChatService:
                 source="system",
                 intent="greeting",
             )
+        if self._is_goodbye(normalized):
+            return await self._respond_and_store(
+                conversation,
+                history,
+                question,
+                self._goodbye_message(),
+                [],
+                [],
+                False,
+                "goodbye",
+                source="system",
+                intent="goodbye",
+            )
 
         intent = self._detect_intent(normalized, history, conversation)
 
@@ -817,6 +830,17 @@ class ChatService:
             "- 예: 인턴/채용 공지 뭐 있어?\n"
             "- 예: 특정 공지 링크/지원 자격 알려줘\n"
             "\n필요한 정보를 최대한 공지 근거와 함께 알려드릴게요!"
+        )
+
+    def _is_goodbye(self, question: str) -> bool:
+        endings = {"잘가", "안녕히 계세요", "고마워", "수고했어", "바이", "goodbye", "bye"}
+        q = question.lower()
+        return any(q == e or q.endswith(e) for e in endings)
+
+    def _goodbye_message(self) -> str:
+        return (
+            "대화를 종료할게요. 도움이 필요하면 언제든 다시 불러주세요! 🙌\n"
+            "공지 마감/링크/지원 자격 등 궁금한 게 있으면 편하게 물어보세요."
         )
 
     def _detect_intent(self, question: str, history: Sequence[Dict[str, str]], conversation: Optional[Conversation]) -> str:
