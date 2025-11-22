@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 import asyncio
 import re
 import time
@@ -53,14 +53,25 @@ class RecommendationService:
         user = await User.get(user_id)
         if not user:
             return await self._fallback_feed(limit)
+
+        liked_ids = self._collect_liked_ids(user)
         
         # 2. Rule-based 필터링
         filters = self._build_filters(user)
-        # 최신순으로 정렬하여 상위 limit * 3개를 후보군으로 선정
-        filtered_posts = await Post.find(filters).sort(-Post.posted_at).limit(limit * 3).to_list()
+        exclude_object_ids = self._object_ids_from_strings(liked_ids)
+        if exclude_object_ids:
+            filters["_id"] = {"$nin": exclude_object_ids}
+        # 최신순으로 정렬하여 상위 limit * 4개를 후보군으로 선정
+        filtered_posts = (
+            await Post.find(filters)
+            .sort(-Post.posted_at)
+            .limit(limit * 4)
+            .to_list()
+        )
+        filtered_posts = self._filter_posts_by_likes(filtered_posts, liked_ids)
         
         if not filtered_posts:
-            return await self._fallback_feed(limit)
+            return await self._fallback_feed(limit, liked_ids)
         
         # 3. LLM으로 프로필 문장 생성
         profile_text = await self._build_profile_query(user)
@@ -88,6 +99,7 @@ class RecommendationService:
         
         # 6. 하이브리드 보정 및 정렬
         final_items = self._score_and_sort_posts(filtered_posts, hits, user)
+        final_items = self._filter_items_by_likes(final_items, liked_ids)
         
         # 7. 포맷팅 및 반환
         return await self._format_response(final_items[:limit], limit)
@@ -102,10 +114,15 @@ class RecommendationService:
             return semantic
 
         # fallback의 경우도 명세서 형식에 맞게 meta 수정
+        liked_ids = set()
+        if user_id:
+            user = await User.get(user_id)
+            liked_ids = self._collect_liked_ids(user)
         fallback = await self.feed_service.get_feed(
             category=None,
             page=1,
             page_size=limit,
+            exclude_ids=liked_ids if liked_ids else None,
         )
         # fallback은 이미 올바른 형식이므로 그대로 반환
         return fallback
@@ -672,6 +689,39 @@ class RecommendationService:
         scored_items.sort(key=lambda x: x["semantic_score"], reverse=True)
         return scored_items
 
+    def _collect_liked_ids(self, user: Optional[User]) -> Set[str]:
+        if not user or not user.liked_post_ids:
+            return set()
+        return {pid for pid in user.liked_post_ids if pid}
+
+    def _object_ids_from_strings(self, ids: Set[str]) -> List[ObjectId]:
+        object_ids: List[ObjectId] = []
+        for pid in ids:
+            try:
+                if pid and ObjectId.is_valid(pid):
+                    object_ids.append(ObjectId(pid))
+            except (TypeError, ValueError):
+                continue
+        return object_ids
+
+    def _filter_posts_by_likes(
+        self,
+        posts: List[Post],
+        liked_ids: Set[str],
+    ) -> List[Post]:
+        if not liked_ids:
+            return posts
+        return [post for post in posts if str(post.id) not in liked_ids]
+
+    def _filter_items_by_likes(
+        self,
+        items: List[Dict[str, Any]],
+        liked_ids: Set[str],
+    ) -> List[Dict[str, Any]]:
+        if not liked_ids:
+            return items
+        return [item for item in items if item.get("id") not in liked_ids]
+
     async def _format_response(self, items: List[Dict[str, Any]], limit: int) -> Dict[str, Any]:
         """
         추천 결과를 API 응답 형식으로 포맷팅
@@ -702,7 +752,7 @@ class RecommendationService:
             },
         }
 
-    async def _fallback_feed(self, limit: int) -> Dict[str, Any]:
+    async def _fallback_feed(self, limit: int, exclude_ids: Optional[Set[str]] = None) -> Dict[str, Any]:
         """
         Fallback: 기본 피드 반환
         """
@@ -710,4 +760,5 @@ class RecommendationService:
             category=None,
             page=1,
             page_size=limit,
+            exclude_ids=exclude_ids if exclude_ids else None,
         )
