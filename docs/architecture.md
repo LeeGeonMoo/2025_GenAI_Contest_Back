@@ -1,4 +1,4 @@
-﻿# Intelligent Campus Notice Platform - Backend Architecture
+# Intelligent Campus Notice Platform - Backend Architecture
 
 ## 1) Current Scope
 - FastAPI app serving /api/* endpoints for feed, search, chat, likes, reminders, user profile.
