@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import asyncio
 import re
 import time
@@ -109,51 +109,22 @@ class RecommendationService:
         user_id: Optional[str],
         limit: int,
     ) -> Dict[str, Any]:
-        semantic = await self._semantic_from_likes(user_id, limit)
+        user, liked_posts = await self._fetch_user_and_likes(user_id)
+        semantic = await self._semantic_from_likes(user, liked_posts, limit)
         if semantic:
             return semantic
 
-        # fallback의 경우도 명세서 형식에 맞게 meta 수정
-        liked_ids = set()
-        if user_id:
-            user = await User.get(user_id)
-            liked_ids = self._collect_liked_ids(user)
-        fallback = await self.feed_service.get_feed(
-            category=None,
-            page=1,
-            page_size=limit,
-            exclude_ids=liked_ids if liked_ids else None,
-        )
-        # fallback은 이미 올바른 형식이므로 그대로 반환
-        return fallback
+        return {"items": [], "meta": {"total": 0, "page": 1, "page_size": limit, "total_pages": 0}}
 
     async def _semantic_from_likes(
         self,
-        user_id: Optional[str],
+        user: Optional[User],
+        ordered_liked_posts: List[Post],
         limit: int,
     ) -> Optional[Dict[str, Any]]:
-        if not user_id:
+        if not user or not ordered_liked_posts:
             return None
 
-        user = await User.get(user_id)
-        if not user or not user.liked_post_ids:
-            return None
-
-        object_ids = [
-            ObjectId(post_id)
-            for post_id in user.liked_post_ids
-            if ObjectId.is_valid(post_id)
-        ]
-        if not object_ids:
-            return None
-
-        liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
-        liked_map = {str(post.id): post for post in liked_posts}
-        ordered_liked_posts = [
-            liked_map[pid] for pid in user.liked_post_ids if pid in liked_map
-        ]
-        if not ordered_liked_posts:
-            return None
         combined_text = " ".join(
             filter(None, [(post.summary or post.body) for post in ordered_liked_posts])
         ).strip()
@@ -161,15 +132,28 @@ class RecommendationService:
         if not vector:
             return None
 
-        hits = await vector_store.search_similar(vector, limit=limit * 2)
+        attempts = 0
+        max_attempts = 3
+        search_limit = limit * 2
+        max_limit = limit * 8
+        items: List[Dict[str, Any]] = []
+
         exclude_ids = {str(post.id) for post in ordered_liked_posts}
-        items = await self._posts_from_hits(
-            hits,
-            exclude_ids,
-            limit,
-            user_id=user_id,
-            liked_posts=ordered_liked_posts,
-        )
+
+        while attempts <= max_attempts and search_limit <= max_limit:
+            hits = await vector_store.search_similar(vector, limit=search_limit)
+            items = await self._posts_from_hits(
+                hits,
+                exclude_ids,
+                limit,
+                user_id=str(user.id),
+                liked_posts=ordered_liked_posts,
+            )
+            if len(items) >= limit or search_limit >= max_limit:
+                break
+            attempts += 1
+            search_limit *= 2
+
         if not items:
             return None
 
@@ -762,3 +746,30 @@ class RecommendationService:
             page_size=limit,
             exclude_ids=exclude_ids if exclude_ids else None,
         )
+
+    async def _fetch_user_and_likes(
+        self,
+        user_id: Optional[str],
+    ) -> Tuple[Optional[User], List[Post]]:
+        if not user_id:
+            return None, []
+        user = await User.get(user_id)
+        if not user or not user.liked_post_ids:
+            return user, []
+
+        object_ids: List[ObjectId] = []
+        for post_id in user.liked_post_ids:
+            try:
+                if post_id and ObjectId.is_valid(post_id):
+                    object_ids.append(ObjectId(post_id))
+            except (TypeError, ValueError):
+                continue
+        if not object_ids:
+            return user, []
+
+        liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
+        liked_map = {str(post.id): post for post in liked_posts}
+        ordered_liked_posts = [
+            liked_map[pid] for pid in user.liked_post_ids if pid in liked_map
+        ]
+        return user, ordered_liked_posts
