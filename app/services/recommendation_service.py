@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
 import asyncio
+import re
 import time
 
 from beanie.operators import In
@@ -298,10 +299,17 @@ class RecommendationService:
             '출력 형식: "<한 줄 이유>" (30~60자, 한국어)'
         )
         system_prompt = (
-            "사용자가 좋아요한 공지와 후보 공지의 공통 주제/키워드를 한 줄로 설명합니다. "
-            "모호한 표현, 미사여구, 중복을 피하고, 근거가 없으면 '관련 근거 없음'을 반환합니다. "
-            "최대 60자, 한국어 한 줄."
-        )
+    "두 공지의 공통점을 분석하여 추천 사유를 작성합니다. 다음 예시의 톤앤매너를 따르세요.\n\n"
+    "예시 1:\n"
+    "- 좋아요한 공지: 현대자동차 AI 채용연계형 인턴\n"
+    "- 후보 공지: 삼성전자 SW 아카데미 모집\n"
+    "- 출력: 💡 좋아요를 눌렀던 SW/AI 분야의 커리어 개발 기회입니다.\n\n"
+    "예시 2:\n"
+    "- 좋아요한 공지: 2024학년도 2학기 국가장학금 신청\n"
+    "- 후보 공지: 교외 00재단 생활비 장학금\n"
+    "- 출력: 💰 지난 번에 본 소득분위 기반 장학금 혜택과 유사해요.\n\n"
+    "위와 같이 핵심 키워드를 포함하여 30자 이내의 한국어 한 줄로 설명하세요."
+)
 
         try:
             response = await asyncio.wait_for(
@@ -415,11 +423,46 @@ class RecommendationService:
         reason = (text or "").strip()
         if not reason:
             return ""
-        if not reason.startswith("추천해요"):
-            reason = f"추천해요: {reason}"
-        if not reason.endswith(("요", "요.", "에요", "에요.", "이에요", "이에요.", "입니다.", "입니다")):
-            reason = reason.rstrip('.') + " 때문이에요."
-        return reason
+
+        reason = re.sub(r"\s+", " ", reason)
+        # remove duplicated "추천해요" style prefixes while keeping leading emoji/symbols
+        reason = re.sub(
+            r"^([\W_]{0,3})?추천해요[:\s-]*",
+            r"\1",
+            reason,
+            flags=re.IGNORECASE,
+        ).strip()
+        reason = re.sub(
+            r"^추천\s*(?:이유|사유)[:\s-]*",
+            "",
+            reason,
+            flags=re.IGNORECASE,
+        ).strip()
+
+        if not reason:
+            return ""
+
+        polite_endings = (
+            "요",
+            "요.",
+            "에요",
+            "에요.",
+            "이에요",
+            "이에요.",
+            "입니다",
+            "입니다.",
+            "습니다",
+            "습니다.",
+            "다",
+            "다.",
+        )
+        if not reason.endswith(polite_endings):
+            if reason[-1] in ".!?":
+                pass
+            else:
+                reason = reason.rstrip(". ") + "입니다."
+
+        return reason.strip()
 
     def _heuristic_reason(self, liked_posts: List[Post], candidate: Post) -> str:
         cand_tags = set(candidate.tags or [])
