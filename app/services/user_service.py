@@ -62,45 +62,37 @@ class UserService:
                 },
             }
 
-        ids = [pid for pid in user.liked_post_ids if pid]
-        offset = max(page - 1, 0) * page_size
-        paged_ids = ids[offset : offset + page_size]
-        
-        # 문자열 ID를 ObjectId로 변환하여 조회
-        valid_object_ids = []
-        for pid in paged_ids:
+        ids = []
+        for pid in user.liked_post_ids:
+            if not pid:
+                continue
             try:
                 if ObjectId.is_valid(pid):
-                    valid_object_ids.append(ObjectId(pid))
+                    ids.append(pid)
             except (TypeError, ValueError):
                 continue
-        
-        if not valid_object_ids:
+        if not ids:
             return {
                 "items": [],
                 "meta": {
-                    "total": len(ids),
+                    "total": 0,
                     "page": page,
                     "page_size": page_size,
-                    "total_pages": (len(ids) + page_size - 1) // page_size if len(ids) > 0 else 0,
+                    "total_pages": 0,
                 },
             }
-        
-        # Beanie의 In 연산자 사용 (ObjectId 리스트 지원)
-        # 다른 서비스들(search_service, recommendation_service)과 동일한 패턴 사용
-        posts = await Post.find(In(Post.id, valid_object_ids)).to_list()
-        
-        # Preserve the order based on liked_post_ids slice
-        # post_map의 키는 문자열로 변환된 post.id (paged_ids와 매칭하기 위해)
-        post_map = {str(post.id): post for post in posts}
-        
-        # paged_ids는 문자열 리스트이므로, post_map의 키(문자열)와 매칭됨
-        # liked_post_ids에 저장된 순서대로 items 생성
-        items = [
-            self.feed_service._format_post_item(post_map[pid])
-            for pid in paged_ids
-            if pid in post_map
-        ]
+
+        skip = max(page - 1, 0) * page_size
+        object_ids = [ObjectId(pid) for pid in ids]
+        posts = await (
+            Post.find(In(Post.id, object_ids))
+            .sort(-Post.posted_at)
+            .skip(skip)
+            .limit(page_size)
+            .to_list()
+        )
+
+        items = [self.feed_service._format_post_item(post) for post in posts]
         total = len(ids)
         total_pages = (total + page_size - 1) // page_size if total > 0 else 0
         return {
