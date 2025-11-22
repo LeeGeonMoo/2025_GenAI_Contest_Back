@@ -8,3 +8,4 @@ env/
 pip-wheel-metadata/
 .DS_Store
 docker-data/
+docs/dummy_notices/

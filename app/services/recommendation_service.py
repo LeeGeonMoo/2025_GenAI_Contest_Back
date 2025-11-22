@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 import asyncio
+import re
 import time
 
 from beanie.operators import In
@@ -52,14 +53,25 @@ class RecommendationService:
         user = await User.get(user_id)
         if not user:
             return await self._fallback_feed(limit)
+
+        liked_ids = self._collect_liked_ids(user)
         
         # 2. Rule-based 필터링
         filters = self._build_filters(user)
-        # 최신순으로 정렬하여 상위 limit * 3개를 후보군으로 선정
-        filtered_posts = await Post.find(filters).sort(-Post.posted_at).limit(limit * 3).to_list()
+        exclude_object_ids = self._object_ids_from_strings(liked_ids)
+        if exclude_object_ids:
+            filters["_id"] = {"$nin": exclude_object_ids}
+        # 최신순으로 정렬하여 상위 limit * 4개를 후보군으로 선정
+        filtered_posts = (
+            await Post.find(filters)
+            .sort(-Post.posted_at)
+            .limit(limit * 4)
+            .to_list()
+        )
+        filtered_posts = self._filter_posts_by_likes(filtered_posts, liked_ids)
         
         if not filtered_posts:
-            return await self._fallback_feed(limit)
+            return await self._fallback_feed(limit, liked_ids)
         
         # 3. LLM으로 프로필 문장 생성
         profile_text = await self._build_profile_query(user)
@@ -87,6 +99,7 @@ class RecommendationService:
         
         # 6. 하이브리드 보정 및 정렬
         final_items = self._score_and_sort_posts(filtered_posts, hits, user)
+        final_items = self._filter_items_by_likes(final_items, liked_ids)
         
         # 7. 포맷팅 및 반환
         return await self._format_response(final_items[:limit], limit)
@@ -96,46 +109,22 @@ class RecommendationService:
         user_id: Optional[str],
         limit: int,
     ) -> Dict[str, Any]:
-        semantic = await self._semantic_from_likes(user_id, limit)
+        user, liked_posts = await self._fetch_user_and_likes(user_id)
+        semantic = await self._semantic_from_likes(user, liked_posts, limit)
         if semantic:
             return semantic
 
-        # fallback의 경우도 명세서 형식에 맞게 meta 수정
-        fallback = await self.feed_service.get_feed(
-            category=None,
-            page=1,
-            page_size=limit,
-        )
-        # fallback은 이미 올바른 형식이므로 그대로 반환
-        return fallback
+        return {"items": [], "meta": {"total": 0, "page": 1, "page_size": limit, "total_pages": 0}}
 
     async def _semantic_from_likes(
         self,
-        user_id: Optional[str],
+        user: Optional[User],
+        ordered_liked_posts: List[Post],
         limit: int,
     ) -> Optional[Dict[str, Any]]:
-        if not user_id:
+        if not user or not ordered_liked_posts:
             return None
 
-        user = await User.get(user_id)
-        if not user or not user.liked_post_ids:
-            return None
-
-        object_ids = [
-            ObjectId(post_id)
-            for post_id in user.liked_post_ids
-            if ObjectId.is_valid(post_id)
-        ]
-        if not object_ids:
-            return None
-
-        liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
-        liked_map = {str(post.id): post for post in liked_posts}
-        ordered_liked_posts = [
-            liked_map[pid] for pid in user.liked_post_ids if pid in liked_map
-        ]
-        if not ordered_liked_posts:
-            return None
         combined_text = " ".join(
             filter(None, [(post.summary or post.body) for post in ordered_liked_posts])
         ).strip()
@@ -143,15 +132,28 @@ class RecommendationService:
         if not vector:
             return None
 
-        hits = await vector_store.search_similar(vector, limit=limit * 2)
+        attempts = 0
+        max_attempts = 3
+        search_limit = limit * 2
+        max_limit = limit * 8
+        items: List[Dict[str, Any]] = []
+
         exclude_ids = {str(post.id) for post in ordered_liked_posts}
-        items = await self._posts_from_hits(
-            hits,
-            exclude_ids,
-            limit,
-            user_id=user_id,
-            liked_posts=ordered_liked_posts,
-        )
+
+        while attempts <= max_attempts and search_limit <= max_limit:
+            hits = await vector_store.search_similar(vector, limit=search_limit)
+            items = await self._posts_from_hits(
+                hits,
+                exclude_ids,
+                limit,
+                user_id=str(user.id),
+                liked_posts=ordered_liked_posts,
+            )
+            if len(items) >= limit or search_limit >= max_limit:
+                break
+            attempts += 1
+            search_limit *= 2
+
         if not items:
             return None
 
@@ -298,10 +300,17 @@ class RecommendationService:
             '출력 형식: "<한 줄 이유>" (30~60자, 한국어)'
         )
         system_prompt = (
-            "사용자가 좋아요한 공지와 후보 공지의 공통 주제/키워드를 한 줄로 설명합니다. "
-            "모호한 표현, 미사여구, 중복을 피하고, 근거가 없으면 '관련 근거 없음'을 반환합니다. "
-            "최대 60자, 한국어 한 줄."
-        )
+    "두 공지의 공통점을 분석하여 추천 사유를 작성합니다. 다음 예시의 톤앤매너를 따르세요.\n\n"
+    "예시 1:\n"
+    "- 좋아요한 공지: 현대자동차 AI 채용연계형 인턴\n"
+    "- 후보 공지: 삼성전자 SW 아카데미 모집\n"
+    "- 출력: 💡 좋아요를 눌렀던 SW/AI 분야의 커리어 개발 기회입니다.\n\n"
+    "예시 2:\n"
+    "- 좋아요한 공지: 2024학년도 2학기 국가장학금 신청\n"
+    "- 후보 공지: 교외 00재단 생활비 장학금\n"
+    "- 출력: 💰 지난 번에 본 소득분위 기반 장학금 혜택과 유사해요.\n\n"
+    "위와 같이 핵심 키워드를 포함하여 30자 이내의 한국어 한 줄로 설명하세요."
+)
 
         try:
             response = await asyncio.wait_for(
@@ -415,11 +424,46 @@ class RecommendationService:
         reason = (text or "").strip()
         if not reason:
             return ""
-        if not reason.startswith("추천해요"):
-            reason = f"추천해요: {reason}"
-        if not reason.endswith(("요", "요.", "에요", "에요.", "이에요", "이에요.", "입니다.", "입니다")):
-            reason = reason.rstrip('.') + " 때문이에요."
-        return reason
+
+        reason = re.sub(r"\s+", " ", reason)
+        # remove duplicated "추천해요" style prefixes while keeping leading emoji/symbols
+        reason = re.sub(
+            r"^([\W_]{0,3})?추천해요[:\s-]*",
+            r"\1",
+            reason,
+            flags=re.IGNORECASE,
+        ).strip()
+        reason = re.sub(
+            r"^추천\s*(?:이유|사유)[:\s-]*",
+            "",
+            reason,
+            flags=re.IGNORECASE,
+        ).strip()
+
+        if not reason:
+            return ""
+
+        polite_endings = (
+            "요",
+            "요.",
+            "에요",
+            "에요.",
+            "이에요",
+            "이에요.",
+            "입니다",
+            "입니다.",
+            "습니다",
+            "습니다.",
+            "다",
+            "다.",
+        )
+        if not reason.endswith(polite_endings):
+            if reason[-1] in ".!?":
+                pass
+            else:
+                reason = reason.rstrip(". ") + "입니다."
+
+        return reason.strip()
 
     def _heuristic_reason(self, liked_posts: List[Post], candidate: Post) -> str:
         cand_tags = set(candidate.tags or [])
@@ -629,6 +673,39 @@ class RecommendationService:
         scored_items.sort(key=lambda x: x["semantic_score"], reverse=True)
         return scored_items
 
+    def _collect_liked_ids(self, user: Optional[User]) -> Set[str]:
+        if not user or not user.liked_post_ids:
+            return set()
+        return {pid for pid in user.liked_post_ids if pid}
+
+    def _object_ids_from_strings(self, ids: Set[str]) -> List[ObjectId]:
+        object_ids: List[ObjectId] = []
+        for pid in ids:
+            try:
+                if pid and ObjectId.is_valid(pid):
+                    object_ids.append(ObjectId(pid))
+            except (TypeError, ValueError):
+                continue
+        return object_ids
+
+    def _filter_posts_by_likes(
+        self,
+        posts: List[Post],
+        liked_ids: Set[str],
+    ) -> List[Post]:
+        if not liked_ids:
+            return posts
+        return [post for post in posts if str(post.id) not in liked_ids]
+
+    def _filter_items_by_likes(
+        self,
+        items: List[Dict[str, Any]],
+        liked_ids: Set[str],
+    ) -> List[Dict[str, Any]]:
+        if not liked_ids:
+            return items
+        return [item for item in items if item.get("id") not in liked_ids]
+
     async def _format_response(self, items: List[Dict[str, Any]], limit: int) -> Dict[str, Any]:
         """
         추천 결과를 API 응답 형식으로 포맷팅
@@ -659,7 +736,7 @@ class RecommendationService:
             },
         }
 
-    async def _fallback_feed(self, limit: int) -> Dict[str, Any]:
+    async def _fallback_feed(self, limit: int, exclude_ids: Optional[Set[str]] = None) -> Dict[str, Any]:
         """
         Fallback: 기본 피드 반환
         """
@@ -667,4 +744,32 @@ class RecommendationService:
             category=None,
             page=1,
             page_size=limit,
+            exclude_ids=exclude_ids if exclude_ids else None,
         )
+
+    async def _fetch_user_and_likes(
+        self,
+        user_id: Optional[str],
+    ) -> Tuple[Optional[User], List[Post]]:
+        if not user_id:
+            return None, []
+        user = await User.get(user_id)
+        if not user or not user.liked_post_ids:
+            return user, []
+
+        object_ids: List[ObjectId] = []
+        for post_id in user.liked_post_ids:
+            try:
+                if post_id and ObjectId.is_valid(post_id):
+                    object_ids.append(ObjectId(post_id))
+            except (TypeError, ValueError):
+                continue
+        if not object_ids:
+            return user, []
+
+        liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
+        liked_map = {str(post.id): post for post in liked_posts}
+        ordered_liked_posts = [
+            liked_map[pid] for pid in user.liked_post_ids if pid in liked_map
+        ]
+        return user, ordered_liked_posts

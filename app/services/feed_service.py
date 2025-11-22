@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from beanie import PydanticObjectId
+from bson import ObjectId
 
 from app.models.post import Post
 
@@ -18,10 +19,22 @@ class FeedService:
         category: Optional[str],
         page: int,
         page_size: int,
+        exclude_ids: Optional[Set[str]] = None,
     ) -> Dict[str, Any]:
         filters: Dict[str, Any] = {}
         if category:
             filters["category"] = category
+
+        if exclude_ids:
+            valid_object_ids: List[ObjectId] = []
+            for pid in exclude_ids:
+                try:
+                    if pid and ObjectId.is_valid(pid):
+                        valid_object_ids.append(ObjectId(pid))
+                except (TypeError, ValueError):
+                    continue
+            if valid_object_ids:
+                filters["_id"] = {"$nin": valid_object_ids}
 
         offset = max(page - 1, 0) * page_size
 
