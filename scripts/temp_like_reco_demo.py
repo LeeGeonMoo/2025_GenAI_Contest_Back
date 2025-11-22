@@ -116,7 +116,11 @@ async def main() -> None:
     print("\n=== Recommendation result ===")
     print("meta:", result.get("meta"))
     for item in result.get("items", []):
-        print(f"- {item.get('title')} | category={item.get('category')} | id={item.get('_id') or item.get('id')} | score={item.get('semantic_score')}")
+        reason = item.get("reason") or ""
+        print(
+            f"- {item.get('title')} | category={item.get('category')} | "
+            f"id={item.get('_id') or item.get('id')} | score={item.get('semantic_score')} | reason={reason}"
+        )
 
     # Clean up created data
     await cleanup(user, posts)

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional
+import asyncio
+import time
 
 from beanie.operators import In
 from bson import ObjectId
@@ -26,6 +28,12 @@ class RecommendationService:
     ) -> None:
         self.feed_service = feed_service or FeedService()
         self.llm_service = llm_service or LLMService()
+        # Reason-generation tuning knobs
+        self.reason_top_k = 3
+        self.reason_liked_k = 3
+        self.reason_cache_ttl = 15 * 60  # 15 minutes
+        self.reason_timeout = 3.0  # seconds
+        self._reason_cache: Dict[str, tuple[float, str]] = {}
 
     async def profile_recommendations(
         self,
@@ -122,14 +130,26 @@ class RecommendationService:
             return None
 
         liked_posts = await Post.find(In(Post.id, object_ids)).to_list()
-        combined_text = " ".join(filter(None, [(post.summary or post.body) for post in liked_posts])).strip()
-        vector = await self._user_vector(liked_posts, combined_text)
+        liked_map = {str(post.id): post for post in liked_posts}
+        ordered_liked_posts = [
+            liked_map[pid] for pid in user.liked_post_ids[-5:] if pid in liked_map
+        ]
+        combined_text = " ".join(
+            filter(None, [(post.summary or post.body) for post in ordered_liked_posts])
+        ).strip()
+        vector = await self._user_vector(ordered_liked_posts, combined_text)
         if not vector:
             return None
 
         hits = await vector_store.search_similar(vector, limit=limit * 2)
-        exclude_ids = {str(post.id) for post in liked_posts}
-        items = await self._posts_from_hits(hits, exclude_ids, limit)
+        exclude_ids = {str(post.id) for post in ordered_liked_posts}
+        items = await self._posts_from_hits(
+            hits,
+            exclude_ids,
+            limit,
+            user_id=user_id,
+            liked_posts=ordered_liked_posts,
+        )
         if not items:
             return None
 
@@ -202,11 +222,12 @@ class RecommendationService:
         hits: List[Dict[str, Any]],
         exclude_ids: set[str],
         limit: int,
+        user_id: Optional[str],
+        liked_posts: List[Post],
     ) -> List[Dict[str, Any]]:
         def _extract_post_id(hit: Dict[str, Any]) -> Optional[str]:
             return hit.get("post_id") or hit.get("payload", {}).get("post_id") or hit.get("id")
 
-        # semantic score 순서 유지 (hits는 이미 점수 순으로 정렬되어 있음)
         ordered_ids = [
             ObjectId(post_id)
             for post_id in (_extract_post_id(hit) for hit in hits)
@@ -218,9 +239,9 @@ class RecommendationService:
         posts = await Post.find(In(Post.id, ordered_ids)).to_list()
         post_map = {str(post.id): post for post in posts}
 
-        # hits 순서대로 포스트를 가져와서 _format_post_item 사용
         items: List[Dict[str, Any]] = []
-        for hit in hits:
+        reason_budget = limit  # generate reasons for all recommended items
+        for idx, hit in enumerate(hits):
             post_id = _extract_post_id(hit)
             if not post_id:
                 continue
@@ -229,15 +250,224 @@ class RecommendationService:
             post = post_map.get(post_id)
             if not post:
                 continue
-            # _format_post_item 사용하여 일관된 형식으로 변환
             formatted_item = self.feed_service._format_post_item(post)
-            # 디버깅을 위해 semantic score 추가
             formatted_item["semantic_score"] = hit.get("score")
+            formatted_item["reason"] = ""
+            if len(items) < reason_budget:
+                reason = await self._build_reason(
+                    user_id=user_id,
+                    liked_posts=liked_posts,
+                    candidate=post,
+                )
+                formatted_item["reason"] = reason
             items.append(formatted_item)
             if len(items) >= limit:
                 break
         return items
 
+    async def _build_reason(
+        self,
+        user_id: Optional[str],
+        liked_posts: List[Post],
+        candidate: Post,
+    ) -> str:
+        if not liked_posts:
+            return self._friendly_reason("좋아요가 부족해 이유를 만들지 못했어요.")
+
+        cache_key = self._reason_cache_key(user_id, candidate, liked_posts)
+        cached = self._get_reason_cache(cache_key)
+        if cached is not None:
+            return cached
+
+        similar_likes = await self._select_similar_likes(candidate, liked_posts)
+        if not similar_likes:
+            similar_likes = liked_posts[: self.reason_liked_k]
+
+        liked_lines = "\n".join(
+            f"- {self._post_brief(post)}" for post in similar_likes[: self.reason_liked_k]
+        )
+        candidate_line = f"- {self._post_brief(candidate)}"
+        user_prompt = (
+            "좋아요 기반으로 비슷한 공지를 추천합니다.\n"
+            "근거로 사용된 좋아요 공지:\n"
+            f"{liked_lines}\n\n"
+            "추천 후보 공지:\n"
+            f"{candidate_line}\n\n"
+            '출력 형식: "<한 줄 이유>" (30~60자, 한국어)'
+        )
+        system_prompt = (
+            "사용자가 좋아요한 공지와 후보 공지의 공통 주제/키워드를 한 줄로 설명합니다. "
+            "모호한 표현, 미사여구, 중복을 피하고, 근거가 없으면 '관련 근거 없음'을 반환합니다. "
+            "최대 60자, 한국어 한 줄."
+        )
+
+        try:
+            response = await asyncio.wait_for(
+                self.llm_service.client.chat_completion(
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    max_tokens=64,
+                    temperature=0.2,
+                ),
+                timeout=self.reason_timeout,
+            )
+            reason = self._clean_reason(response)
+        except Exception:
+            reason = ""
+
+        if not reason:
+            reason = self._heuristic_reason(liked_posts, candidate)
+
+        reason = self._friendly_reason(reason)
+
+        if cache_key and reason:
+            self._set_reason_cache(cache_key, reason)
+        return reason
+
+    async def _select_similar_likes(
+        self,
+        candidate: Post,
+        liked_posts: List[Post],
+    ) -> List[Post]:
+        """
+        Pick top-N liked posts most similar to the candidate using stored vectors.
+        Falls back to recent likes when vectors are missing.
+        """
+        if not liked_posts:
+            return []
+
+        liked_ids = [str(post.id) for post in liked_posts]
+        vectors = await vector_store.fetch_vectors_by_post_ids([str(candidate.id), *liked_ids])
+        cand_vec = vectors.get(str(candidate.id))
+
+        if not cand_vec:
+            # Try to embed candidate on the fly as a fallback
+            text = " ".join(
+                filter(
+                    None,
+                    [
+                        candidate.title,
+                        candidate.summary,
+                        candidate.body,
+                    ],
+                )
+            )
+            emb = await self.llm_service.embed(text)
+            cand_vec = self._l2_normalize(emb) if emb else None
+        else:
+            cand_vec = self._l2_normalize(cand_vec)
+
+        if not cand_vec:
+            return liked_posts[: self.reason_liked_k]
+
+        scored: List[tuple[float, Post]] = []
+        for post in liked_posts:
+            vec = vectors.get(str(post.id))
+            if not vec:
+                continue
+            sim = self._cosine_similarity(cand_vec, self._l2_normalize(vec))
+            if sim is not None:
+                scored.append((sim, post))
+
+        if not scored:
+            return liked_posts[: self.reason_liked_k]
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [post for _, post in scored[: self.reason_liked_k]]
+
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> Optional[float]:
+        if not a or not b or len(a) != len(b):
+            return None
+        dot = sum(x * y for x, y in zip(a, b))
+        norm_a = sum(x * x for x in a) ** 0.5
+        norm_b = sum(y * y for y in b) ** 0.5
+        if norm_a == 0 or norm_b == 0:
+            return None
+        return dot / (norm_a * norm_b)
+
+    def _post_brief(self, post: Post) -> str:
+        parts = [post.title]
+        tags = ", ".join((post.tags or [])[:3])
+        extras = []
+        if tags:
+            extras.append(tags)
+        if post.category:
+            extras.append(post.category)
+        if post.deadline_at:
+            extras.append(f"마감 {post.deadline_at.date().isoformat()}")
+        if extras:
+            parts.append(f"({' | '.join(extras)})")
+        return " ".join(parts)
+
+    def _clean_reason(self, text: str) -> str:
+        reason = (text or "").strip()
+        if not reason:
+            return ""
+        if len(reason) > 80:
+            reason = reason[:80].rstrip()
+        return reason
+
+    def _friendly_reason(self, text: str) -> str:
+        reason = (text or "").strip()
+        if not reason:
+            return ""
+        if not reason.startswith("추천해요"):
+            reason = f"추천해요: {reason}"
+        if not reason.endswith(("요", "요.", "에요", "에요.", "이에요", "이에요.", "입니다.", "입니다")):
+            reason = reason.rstrip('.') + " 때문이에요."
+        return reason
+
+    def _heuristic_reason(self, liked_posts: List[Post], candidate: Post) -> str:
+        cand_tags = set(candidate.tags or [])
+        liked_tags: set[str] = set()
+        liked_cats: set[str] = set()
+        for post in liked_posts:
+            liked_tags.update(post.tags or [])
+            if post.category:
+                liked_cats.add(post.category)
+
+        overlap_tags = list(cand_tags & liked_tags)
+        if overlap_tags:
+            joined = ", ".join(overlap_tags[:2])
+            return f"{joined} 관심사가 겹칩니다"
+
+        if candidate.category and candidate.category in liked_cats:
+            return f"{candidate.category} 분야 관심과 가깝습니다"
+
+        if candidate.tags:
+            return f"{candidate.tags[0]} 주제와 연관됩니다"
+
+        return "최근 좋아한 공지와 주제가 비슷합니다"
+
+    def _reason_cache_key(
+        self,
+        user_id: Optional[str],
+        candidate: Post,
+        liked_posts: List[Post],
+    ) -> str:
+        if not user_id:
+            return ""
+        liked_ids = [str(post.id) for post in liked_posts[:5]]
+        liked_sig = "|".join(liked_ids)
+        return f"{user_id}:{str(candidate.id)}:{liked_sig}"
+
+    def _get_reason_cache(self, key: str) -> Optional[str]:
+        if not key:
+            return None
+        entry = self._reason_cache.get(key)
+        if not entry:
+            return None
+        expires_at, value = entry
+        if expires_at < time.time():
+            self._reason_cache.pop(key, None)
+            return None
+        return value
+
+    def _set_reason_cache(self, key: str, value: str) -> None:
+        expires_at = time.time() + self.reason_cache_ttl
+        self._reason_cache[key] = (expires_at, value)
     def _build_filters(self, user: User) -> Dict[str, Any]:
         """
         사용자 프로필 기반 MongoDB 필터 생성

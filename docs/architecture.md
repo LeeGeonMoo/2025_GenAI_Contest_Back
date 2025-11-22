@@ -48,7 +48,7 @@ FastAPI (/api) -> Services -> Mongo queries + Qdrant search
 - GET /healthz : health
 - GET /feed : baseline feed (category?, excludes dummy/seed sources)
 - GET /feed/reco-user : profile reco stub (signature mismatch -> error)
-- GET /feed/reco-likes : like-based reco (user_id, limit; semantic -> fallback)
+- GET /feed/reco-likes : like-based reco (user_id, limit; semantic -> fallback; every item includes `semantic_score`, `reason` built from similar liked posts)
 - GET /posts/{id} : post detail
 - GET /search : keyword/semantic (q, mode=keyword|semantic, department?, grade?)
 - POST /likes : add like ({user_id, post_id})
