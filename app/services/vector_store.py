@@ -143,7 +143,7 @@ async def fetch_vectors_by_post_ids(post_ids: Iterable[str]) -> Dict[str, List[f
                 collection_name=get_settings().qdrant_collection_notices,
                 limit=1,
                 with_vectors=True,
-                filter=Filter(
+                scroll_filter=Filter(
                     must=[FieldCondition(key="post_id", match=MatchValue(value=pid))]
                 ),
             )

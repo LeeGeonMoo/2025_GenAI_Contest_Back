@@ -50,7 +50,7 @@ FastAPI (/api) → Services → Mongo 쿼리 + Qdrant 검색
 - GET /healthz : 상태 확인 (타임존 포함)
 - GET /feed : 기본 피드 (category?, 더미 source 제외)
 - GET /feed/reco-user : 프로필 추천 스텁 (FeedService 시그니처 미스매치로 오류 상태)
-- GET /feed/reco-likes : 좋아요 기반 추천 (user_id, limit; 시맨틱 → 실패 시 피드 폴백)
+- GET /feed/reco-likes : 좋아요 기반 추천 (user_id, limit; 시맨틱 -> 피드 폴백, 모든 아이템에 semantic_score + similar likes 기반 reason 포함)
 - GET /posts/{id} : 게시물 단건 (Post 도큐먼트 원본)
 - GET /search : 키워드/시맨틱 (q, mode=keyword|semantic, department?, grade?; 실패 시 키워드)
 - POST /likes : 좋아요 추가 ({user_id, post_id})
