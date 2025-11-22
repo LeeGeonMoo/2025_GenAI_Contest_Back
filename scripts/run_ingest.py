@@ -23,7 +23,7 @@ from app.ingest.sources.dummy import DummyNoticeSource
 from app.ingest.sources.scholarship import ScholarshipNoticeSource
 from app.ingest.sources.internship import InternshipNoticeSource
 from app.ingest.sources.snu_scholarship import SNUScholarshipHTMLSource
-from app.ingest.sources.local_dummy_dataset import LocalDummyDatasetSource
+from app.ingest.sources.local_dummy_json import LocalDummyJSONSource
 
 
 async def main() -> None:
@@ -33,7 +33,8 @@ async def main() -> None:
         ScholarshipNoticeSource(),
         InternshipNoticeSource(),
     ]
-    sources.append(LocalDummyDatasetSource("docs/dummy_notices"))
+    # Prefer curated dummy JSON dataset
+    sources.append(LocalDummyJSONSource("docs/dummy_data/dummy_samples.txt"))
     if settings.crawler_sample_html:
         sources.append(SNUScholarshipHTMLSource(settings.crawler_sample_html))
 
