@@ -716,6 +716,54 @@
     "image_url": null,
     "source_url": "https://www.snu.ac.kr/snunow/notice/general/30005",
     "layout": "detail"
+  },
+  {
+    "idx": 30006,
+    "category": "학생지원",
+    "department": "재료공학부",
+    "title": "2026년 재료공학부 학부생 겨울 인턴 프로그램 안내",
+    "posted": "2025-11-17",
+    "deadline": "2025-11-19",
+    "status": "normal",
+    "body_html": "<section><h3>프로그램 개요</h3><p>재료공학부가 겨울방학 동안 26개 연구실·46개 연구주제로 학부생 인턴을 선발합니다. 2~3학년을 기본 대상으로 하며, 4학년 1학기 재학생·타대생·복학 준비생도 예외적으로 지원 가능합니다.</p></section><section><h3>인턴 정보</h3><ul><li>기간: 2026.01.01. ~ 2026.02.28. (약 2개월)</li><li>규모: 총 26개 연구실 참여</li><li>장학금: 월 50만원 (각 연구실 지급)</li></ul></section><section><h3>일정</h3><ul><li>주제 공고 · 교수 면담: ~2025.11.17.(월)</li><li>지원 마감: 2025.11.17.(월) 16:00</li><li>선발 통보: 2025.11.27.(목)부터 개별 이메일 안내</li><li>오리엔테이션: 2026년 1월 초 예정</li><li>연구 발표 제출: 2026.02.26.(목) 16:00까지 (포스터 영상, eTL 업로드)</li></ul></section><section><h3>지원 방법</h3><ul><li>온라인 학생지원서 제출 + 성적증명서, 개인정보 동의서 이메일 제출(hjchoi06@snu.ac.kr)</li><li>교수 면담 후 지원 가능, 학생당 최대 2개 주제 신청</li></ul></section><section><h3>필수 사항</h3><ul><li>안전교육 이수: 재학생은 정기안전교육 이수증, 휴학생·타대생은 외부연구자 교육 (문의: 전형우 02-880-7156 / jhw1234@snu.ac.kr)</li><li>첨부 PDF에서 연구 주제와 세부 안내 확인</li></ul></section>",
+    "tags": ["인턴십", "재료공학부", "겨울방학", "연구참여"],
+    "contact_org": "재료공학부 학부행정실",
+    "contact_tel": null,
+    "contact_email": "hjchoi06@snu.ac.kr",
+    "audience": "학부생",
+    "grades": "2,3,4",
+    "majors": "재료공학부",
+    "location": "서울대학교 공과대학 재료공학부 연구실",
+    "links": [
+      { "label": "상세 안내", "url": "https://mse.snu.ac.kr/2026%eb%85%84-%ec%9e%ac%eb%a3%8c%ea%b3%b5%ed%95%99%eb%b6%80-%ed%95%99%eb%b6%80%ec%83%9d-%ea%b2%a8%ec%9a%b8-%ec%9d%b8%ed%84%b4-%ed%94%84%eb%a1%9c%ea%b7%b8%eb%9e%a8-%ec%95%88%eb%82%b4/" }
+    ],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://mse.snu.ac.kr/2026%eb%85%84-%ec%9e%ac%eb%a3%8c%ea%b3%b5%ed%95%99%eb%b6%80-%ed%95%99%eb%b6%80%ec%83%9d-%ea%b2%a8%ec%9a%b8-%ec%9d%b8%ed%84%b4-%ed%94%84%eb%a1%9c%ea%b7%b8%eb%9e%a8-%ec%95%88%eb%82%b4/",
+    "layout": "detail"
+  },
+  {
+    "idx": 30007,
+    "category": "학생지원",
+    "department": "기계공학부",
+    "title": "2026학년도 1학기 기계공학부 UROP 신청 안내",
+    "posted": "2025-11-18",
+    "deadline": "2026-01-07",
+    "status": "normal",
+    "body_html": "<section><h3>프로그램 개요</h3><p>기계공학부는 학부생이 대학원 연구실에서 실제 연구를 체험할 수 있도록 UROP(Undergraduate Research Opportunity Program) 교과목 ‘공학연구의 실습 1/2’을 운영합니다. 2026학년도 1학기에 연구 참여를 희망하는 학생은 아래 일정을 참고해 신청하세요.</p></section><section><h3>학점 및 수강신청</h3><ul><li>학점: 1학점, 성적평가 S/U</li><li>교과구분: 주전공 전공선택</li><li>수강 대상: 2026-1학기 기준 5학기 이상 학부생</li><li>수강신청 과목: 공학연구의 실습 1(400.320), 공학연구의 실습 2(400.420)</li><li>실습 2는 이전 학기에 실습 1을 이수한 학생만 신청 가능</li><li>졸업논문 교과목(기계시스템설계 1,2)과는 별도 과목으로 동일 주제 수행 불가</li></ul></section><section><h3>일정</h3><ul><li>~2026.01.07.(수) 18:00: 구글폼 제출로 학부 신청</li><li>2026.01.13.(화): 1지망 선발 결과 개별 통보</li><li>2026.01.20.(화): 2~3지망 선발 결과 개별 통보</li><li>2026.01.~03.: 겨울방학 및 2026-1학기 중 연구실별 과제 수행</li><li>2026.02.09.(월)~02.15.(일): 2026-1학기 수강신청 기간 내 공학연구의 실습 1/2 수강신청</li></ul></section><section><h3>수강 및 유의사항</h3><ul><li>2026-1학기 중 해당 교과목을 수강신청하지 않으면 학점 인정 불가</li><li>공학연구의 실습 1·2 합산 최대 2학점까지 이수 가능 (동시 수강 불가)</li><li>연구 수행 후 2026-1학기 말 연구보고서를 제출하면 지도교수가 S/U 부여</li><li>연구실별로 제시한 여러 과제 중 1개만 참여 가능하나 1~3지망까지 신청 권장</li><li>UROP 과제 수행 여부는 해당 연구실 대학원 진학과 무관</li></ul></section><section><h3>신청 방법</h3><ul><li>첨부 안내문 확인 후 구글폼 제출 (링크 추후 공지)</li><li>제출 서류: 신청서(구글폼), 성적증명서 등 세부 사항은 첨부파일 참고</li></ul></section><section><h3>문의</h3><ul><li>기계공학부 행정실(301동 116호)</li><li>조선희 (seonhee@snu.ac.kr / 02-880-1914)</li></ul></section>",
+    "tags": ["UROP", "학부연구", "기계공학부", "학생지원"],
+    "contact_org": "기계공학부 행정실",
+    "contact_tel": "02-880-1914",
+    "contact_email": "seonhee@snu.ac.kr",
+    "audience": "학부생",
+    "grades": "3,4",
+    "majors": "기계공학부",
+    "location": "301동 기계공학부 연구실",
+    "links": [],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://me.snu.ac.kr/%ed%95%99%eb%b6%80-%ea%b3%b5%ec%a7%80%ec%82%ac%ed%95%ad/document/20750/?keyword=urop",
+    "layout": "detail"
   }
 ]
 
@@ -956,6 +1004,54 @@
     "image_url": null,
     "source_url": "https://gsds.snu.ac.kr/news/announcement/70005",
     "layout": "detail"
+  },
+  {
+    "idx": 70006,
+    "category": "채용·진로",
+    "department": "경력개발센터",
+    "title": "[로보로드] 비전 AI 엔지니어 인턴 채용 공고",
+    "posted": "2025-11-01",
+    "deadline": null,
+    "status": "normal",
+    "body_html": "<section><h3>회사 소개</h3><p>로보로드는 도로 포장 유지 보수를 AI·로보틱스 기술로 혁신하고자 설립된 스타트업입니다. AI Vision, 생애주기 의사결정, 로봇 제어 기술을 결합해 무인 도로 포장 유지 보수 솔루션을 개발하고 있으며, 지자체를 대상으로 B2G 사업 협의를 진행 중입니다.</p></section><section><h3>근무 조건</h3><ul><li>근무 형태: 인턴 (3개월, 기간 협의 가능)</li><li>보상: 월 210만원 + 점심 식사 제공</li><li>근무지: 경기 성남시 수정구 창업로 43 판교글로벌비즈센터 5층 5-7 로보로드</li></ul></section><section><h3>주요 업무</h3><ul><li>PyTorch 기반 탐지·분류·세그멘테이션 모델 설계 및 학습</li><li>도로 파손 객체 탐지·측량 모델 연구 및 개발</li><li>Dash Cam 기반 공개 도로 영상 수집 및 데이터 구축</li><li>비전 AI 모델 학습/성능 평가 및 객체 크기·깊이 추정 모델 개발</li></ul></section><section><h3>자격 요건</h3><ul><li>학력: 학사 졸업(예정) 이상, 경력 무관</li><li>PyTorch 및 Python 프로그래밍 숙련</li><li>Linux, Git, Docker 등 오픈소스 개발 환경 활용 경험</li><li>이미지·영상 처리 개발 경험</li></ul></section><section><h3>우대 사항</h3><ul><li>YOLO 및 Object Detection · Multi-Object Tracking 경험</li><li>Public Cloud 기반 시스템 배포/운영 경험</li><li>모델 경량화 및 성능 최적화 경험</li></ul></section><section><h3>전형 및 제출</h3><ul><li>전형 절차: 서류 → 면접 → 입사일 협의 → 최종 합격</li><li>제출 서류: 이력서(필수), 포트폴리오(선택)</li><li>제출 방법: taeyoung.kwak@rovoroad.com 로 이메일 접수</li></ul></section><section><h3>기타 안내</h3><ul><li>지원서는 수시로 검토되며 합격자에 한해 연락</li><li>지원서 내용이 사실과 다를 경우 합격/입사 취소</li><li>복지: 점심 식사 제공, 교육·자기개발비 지원</li></ul></section>",
+    "tags": ["인턴", "비전AI", "로보틱스", "경력개발센터"],
+    "contact_org": "경력개발센터",
+    "contact_tel": null,
+    "contact_email": "taeyoung.kwak@rovoroad.com",
+    "audience": "학부생,대학원생",
+    "grades": "3,4",
+    "majors": "컴퓨터공학·AI·로보틱스",
+    "location": "경기 성남시 수정구 창업로 43 판교글로벌비즈센터 5층 5-7",
+    "links": [],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://career.snu.ac.kr/student/employment/internship/view?category=3&parent=internship&id=87808#",
+    "layout": "detail"
+  },
+  {
+    "idx": 70007,
+    "category": "채용·진로",
+    "department": "경력개발센터",
+    "title": "[마케팅 인턴/채용전환형] AI 로봇 스타트업 비욘드허니컴 인턴 모집",
+    "posted": "2025-07-03",
+    "deadline": "2025-07-31",
+    "status": "normal",
+    "body_html": "<section><h3>회사 소개</h3><p>비욘드허니컴은 AI 로봇을 활용해 셰프 수준의 조리를 구현하는 DeepTech 스타트업입니다. Grill X를 통해 분자 센서, 온디바이스 AI, 로봇 설계 기술을 자체 내재화했고, 누적 투자금 200억 원 이상을 확보하며 글로벌 조리 AI 분야 선도 기업으로 성장 중입니다.</p></section><section><h3>업무 경험</h3><ul><li>Agile 기반 실행·개선 문화 경험</li><li>데이터 기반 마케팅 사고와 캠페인 설계</li><li>콘텐츠 기획부터 실행, 성과 분석까지 전 과정 실무 참여</li><li>빠른 피드백 루프 속에서 성과 중심 의사결정 참여</li></ul></section><section><h3>주요 업무</h3><ul><li>사업개발·디지털 마케팅 스쿼드 업무 지원</li><li>AI 그릴 로봇 글로벌 진출 전략 기획 및 실행</li><li>웹사이트·블로그·SNS 콘텐츠 기획/제작</li><li>영상·이미지 등 멀티 포맷 마케팅 소재 제작</li><li>Meta/Google/Naver 등 온라인 광고 집행과 성과 리포팅</li></ul></section><section><h3>자격 요건</h3><ul><li>목표 지향적이며 빠른 실행을 즐기는 분</li><li>문제를 정의하고 해결안을 제시할 수 있는 분</li><li>Photoshop, Premiere Pro 등 디자인/영상 편집 능숙자</li><li>영어 커뮤니케이션 가능 및 3개월 이상 근무 가능자</li><li>정규직 전환 시 풀타임 근무 가능자</li></ul></section><section><h3>우대 사항</h3><ul><li>영어 기반 SNS 콘텐츠/광고 운영 경험</li><li>제품·기술 이해도를 바탕으로 메시지 기획 가능자</li><li>다양한 SNS 플랫폼 운영 경험 및 트렌드 감도 높은 분</li><li>마케팅 크리에이티브 기획·캠페인 경험</li></ul></section><section><h3>근무 조건</h3><ul><li>근무 형태: 3개월 인턴 (평가 후 정규직 전환 협의)</li><li>근무 시간: 주 5일 11:00~18:00</li><li>근무지: 서울 강남구 (언주역 도보 5분)</li><li>급여: 월 230만원 (세전)</li></ul></section><section><h3>복지</h3><ul><li>11시 출근·18시 퇴근</li><li>정규직 전환 시 업계 최고 수준 보상 협의</li><li>스낵바·카페 간식 및 음료 제공</li><li>도서 구매비 지원</li><li>다양한 단백질 식사 제공</li></ul></section><section><h3>전형 및 제출</h3><ul><li>전형: 서류 → 1차 인터뷰 → 2차 인터뷰(필요 시) → 입사</li><li>제출 서류: 이력서, 포트폴리오(PDF 또는 링크)</li><li>접수: 담당자 이메일(jake.huh@beyondhoneycomb.com)</li><li>마감: 2025년 7월 31일(채용 시 조기 마감)</li><li>홈페이지: https://www.beyondhoneycomb.com/dmi</li></ul></section>",
+    "tags": ["마케팅", "인턴", "AI로봇", "비욘드허니컴"],
+    "contact_org": "비욘드허니컴",
+    "contact_tel": null,
+    "contact_email": "jake.huh@beyondhoneycomb.com",
+    "audience": "학부생,대학원생",
+    "grades": "3,4",
+    "majors": "마케팅·경영·콘텐츠",
+    "location": "서울 강남구 (언주역 인근)",
+    "links": [
+      { "label": "회사 홈페이지", "url": "https://www.beyondhoneycomb.com/dmi" }
+    ],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://career.snu.ac.kr/student/employment/internship/view?category=3&parent=internship&id=87600",
+    "layout": "detail"
   }
 ]
 
@@ -1077,6 +1173,57 @@
     "attachments": [],
     "image_url": null,
     "source_url": "https://nursing.snu.ac.kr/board/notice/80005",
+    "layout": "detail"
+  },
+  {
+    "idx": 80006,
+    "category": "국제",
+    "department": "공과대학 국제협력실",
+    "title": "[해외인턴/지원금 제공] 캐나다 Polytechnique Montréal 2026 Summer Research Internship Program",
+    "posted": "2025-11-06",
+    "deadline": "2025-12-22",
+    "status": "normal",
+    "body_html": "<section><h3>프로그램 개요</h3><p>서울대학교 공과대학과 캐나다 Ecole Polytechnique Montréal 간 협정에 따라 2026년 여름 연구 인턴십 참가자를 모집합니다. 몬트리올 캠퍼스에서 최소 4개월(4~7월, 지정 시작일 선택) 동안 연구 과제에 참여하며, 도보 거리에 숙소가 제공됩니다.</p></section><section><h3>지원금 및 혜택</h3><ul><li>Poly-MTL: 우수 선발자에게 최대 CAD 6,000 (월 CAD 1,500) 지급</li><li>서울대 공대: 항공 보조금 (상한액 있으며 사전 승인 필요)</li><li>숙소: 캠퍼스 인근 기숙형 숙소 제공</li></ul></section><section><h3>지원 자격</h3><ul><li>지원 시점 기준 공과대학 학부 4학기 이상 이수자 (2026년 8월 졸업 예정자는 제외)</li><li>첨부 연구 과제 요건 충족 및 영어 또는 불어 능통자</li><li>인턴 종료 후 서울대 복학 예정자</li></ul></section><section><h3>제출 서류 (영문)</h3><ul><li>인턴 계획서/Letter of Motivation (관심 연구분야별 개별 작성)</li><li>이력서, 성적증명서(GPA 기재), 재학증명서</li><li>여권 사본, 기존 인턴십 보고서(해당자), 외국어 성적</li><li>온라인 신청서는 공대 1차 심사 통과자에 한해 추후 제출</li></ul></section><section><h3>일정 및 접수</h3><ul><li>1차 서류 마감: 2025년 12월 22일(월)</li><li>접수처: engia@snu.ac.kr (공대 국제협력실)</li><li>문의: 김희선 담당자 (kavkr@snu.ac.kr, 02-880-8079)</li></ul></section><section><h3>유의 사항</h3><ul><li>1차 통과자만 Poly-MTL 온라인 지원 가능</li><li>외국대 지도교수 평가서 및 인턴 보고서 제출 의무</li><li>공대 외 학생은 항공료 지원 제외, 대학원생 별도 지침 적용</li><li>RISE 재원 상황에 따라 이공계 비공대생 지원금 확대 가능</li></ul></section>",
+    "tags": ["해외인턴", "캐나다", "Polytechnique", "공과대학"],
+    "contact_org": "공과대학 국제협력실",
+    "contact_tel": "02-880-8079",
+    "contact_email": "engia@snu.ac.kr",
+    "audience": "학부생,대학원생",
+    "grades": "2,3,4",
+    "majors": "공과대학",
+    "location": "캐나다 몬트리올",
+    "links": [
+      { "label": "Polytechnique Montréal", "url": "http://www.polymtl.ca/en/" },
+      { "label": "서울대 공대 공지", "url": "https://eng.snu.ac.kr/snu/bbs/BMSR00001/view.do?boardId=6191&menuNo=200121" }
+    ],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://eng.snu.ac.kr/snu/bbs/BMSR00001/view.do?boardId=6191&menuNo=200121",
+    "layout": "detail"
+  },
+  {
+    "idx": 80007,
+    "category": "국제",
+    "department": "공과대학 국제협력실",
+    "title": "[참가 경비 전액 지원/학부생] UAE Burj Azizi Global University Exposure Program 참가자 모집",
+    "posted": "2025-10-13",
+    "deadline": "2025-11-02",
+    "status": "normal",
+    "body_html": "<section><h3>프로그램 소개</h3><p>Burj Azizi Global University Exposure Program은 Azizi Developments가 주관하는 글로벌 교육 프로그램으로, 2025년 1월 시작 이후 전 세계 70여 개 대학과 협력하며 최첨단 건축·엔지니어링 현장을 체험할 기회를 제공합니다. Burj Azizi는 2028~2029년 완공 예정인 세계 2번째로 높은 타워 프로젝트입니다.</p></section><section><h3>일정</h3><ul><li>UAE 입국: 2025.12.14.(일)</li><li>UAE 출국: 2025.12.21.(일)</li></ul></section><section><h3>참가 자격</h3><ul><li>공과대학 소속 학부생으로 4학기 이상 이수자</li><li>UAE 파견 기간 기준 공대 재학생 신분 유지 (자유전공/복수·부전공자는 제외)</li><li>해외여행 결격 사유가 없고, 2025.12.14. 현지 도착 가능자</li><li>4학년 우대</li></ul></section><section><h3>혜택</h3><ul><li>두바이 방문 및 프로그램 참가 비용 전액 지원 (UAE 측 부담)</li></ul></section><section><h3>제출 서류</h3><ul><li>지원서 (신청 동기 포함 1페이지 내 자유 형식)</li><li>영문 CV</li><li>외국어 성적 (만료 성적 제출 가능)</li><li>서울대 성적표 (4학기 이상 이수 내역 및 GPA 포함)</li></ul></section><section><h3>신청 및 문의</h3><ul><li>마감: 2025.11.02.(일) 12:00</li><li>제출처: engia@snu.ac.kr</li><li>결과 발표: 2025.11.03.(월) 또는 11.04.(화) 개별 통보 (필요 시 추가 영어 인터뷰)</li><li>문의: 공대 국제협력실 kavkr@snu.ac.kr</li></ul></section>",
+    "tags": ["해외프로그램", "UAE", "공과대학", "건축체험"],
+    "contact_org": "공과대학 국제협력실",
+    "contact_tel": null,
+    "contact_email": "engia@snu.ac.kr",
+    "audience": "학부생",
+    "grades": "2,3,4",
+    "majors": "공과대학",
+    "location": "아랍에미리트 두바이",
+    "links": [
+      { "label": "Burj Azizi Program 안내", "url": "https://eng.snu.ac.kr/snu/bbs/BMSR00001/view.do?boardId=6145&menuNo=200121" }
+    ],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://eng.snu.ac.kr/snu/bbs/BMSR00001/view.do?boardId=6145&menuNo=200121",
     "layout": "detail"
   }
 ]
@@ -1354,6 +1501,30 @@
     "audience": "전체",
     "majors": "전체",
     "source_url": "",
+    "layout": "detail"
+  },
+  {
+    "idx": 92006,
+    "category": "일반공지",
+    "department": "전기정보공학부",
+    "title": "2026학년도 관악학생생활관 학부재학생 입주 신청 일정 안내",
+    "posted": "2025-11-20",
+    "status": "normal",
+    "body_html": "<section><h3>안내</h3><p>2026학년도 관악학생생활관 학부재학생 입주 신청 일정을 안내합니다. 관심 있는 학생은 기간 내 마이스누를 통해 신청해 주세요.</p></section><section><h3>주요 일정</h3><ul><li>입주 신청: 2025.11.24.(월) 10:00 ~ 11.28.(금) 18:00</li><li>신청 방법: 서울대학교 포털 mySNU 온라인 신청</li><li>입주 대상자 발표: 2025.12.15.(월) 11:00</li></ul></section><section><h3>추가 정보</h3><ul><li>선발 및 세부 안내는 관악학생생활관 홈페이지 입주/퇴거 공지 확인 (http://snudorm.snu.ac.kr)</li><li>붙임: 2026학년도 학부재학생 입주신청 및 선발 안내문(PDF)</li></ul></section>",
+    "tags": ["생활관", "관악사", "기숙사", "입주신청"],
+    "contact_org": "전기정보공학부",
+    "contact_tel": null,
+    "contact_email": null,
+    "audience": "학부생",
+    "grades": "1,2,3,4",
+    "majors": "전체",
+    "location": "관악학생생활관",
+    "links": [
+      { "label": "관악학생생활관 공지", "url": "http://snudorm.snu.ac.kr" }
+    ],
+    "attachments": [],
+    "image_url": null,
+    "source_url": "https://ece.snu.ac.kr/community/campus-life?md=v&bbsidx=57052",
     "layout": "detail"
   }
 ]
